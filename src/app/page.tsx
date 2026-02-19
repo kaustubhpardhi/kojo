@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import { useTheme } from "@/components/ThemeProvider";
@@ -32,6 +32,7 @@ export default function HomePage() {
   const { user, loading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -94,17 +95,21 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  // Check for active session on load
+
+  // Open summary when navigating from log page with completed session (?summary=sessionId)
   useEffect(() => {
-    async function checkActive() {
-      if (!user) return;
-      const active = await getActiveSession(user.id);
-      if (active) {
-        router.push(`/log/${active.id}`);
-      }
-    }
-    if (user) checkActive();
-  }, [user, router]);
+    const summaryId = searchParams.get("summary");
+    if (!summaryId || !user) return;
+    let cancelled = false;
+    getSessionDetail(summaryId).then((detail) => {
+      if (cancelled || !detail) return;
+      setSummarySession(detail);
+      setShowSummary(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, user]);
 
   const handlePrevMonth = () => {
     if (month === 1) {
@@ -148,11 +153,22 @@ export default function HomePage() {
       }
     }
 
-    // Today or future — open day picker
+    // Today or future — if today and has in-progress session, go to it; else day picker
     const dateObj = new Date(date + "T00:00:00");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (dateObj >= today) {
+      const isToday =
+        dateObj.getFullYear() === today.getFullYear() &&
+        dateObj.getMonth() === today.getMonth() &&
+        dateObj.getDate() === today.getDate();
+      if (isToday && user) {
+        const active = await getActiveSession(user.id);
+        if (active) {
+          router.push(`/log/${active.id}`);
+          return;
+        }
+      }
       setSelectedDate(date);
       setShowDayPicker(true);
     }
@@ -316,9 +332,9 @@ export default function HomePage() {
           {/* Legend */}
           <div className="flex items-center justify-center gap-8 opacity-25">
             {[
-              { kanji: "脚", label: "A" },
-              { kanji: "押", label: "B" },
-              { kanji: "引", label: "C" },
+              { kanji: "胸", label: "Chest" },
+              { kanji: "脚", label: "Legs" },
+              { kanji: "肩", label: "Back" },
             ].map((item) => (
               <div
                 key={item.label}
@@ -380,6 +396,7 @@ export default function HomePage() {
         onClose={() => {
           setShowSummary(false);
           setSummarySession(null);
+          if (searchParams.get("summary")) router.replace("/");
         }}
       />
     </div>

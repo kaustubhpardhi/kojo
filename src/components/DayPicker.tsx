@@ -22,23 +22,23 @@ interface DayInfo {
 const DAYS: DayInfo[] = [
   {
     day: "A",
-    label: "Day A",
-    kanji: "脚",
-    muscles: "Legs & Core",
+    label: "Chest + Back + Arms",
+    kanji: "胸",
+    muscles: "Chest + Back + Arms",
     color: "var(--accent-primary)",
   },
   {
     day: "B",
-    label: "Day B",
-    kanji: "押",
-    muscles: "Push — Chest, Shoulders, Triceps",
+    label: "Legs + Posterior Chain + Rear Delts",
+    kanji: "脚",
+    muscles: "Legs + Posterior Chain + Rear Delts",
     color: "var(--accent-secondary)",
   },
   {
     day: "C",
-    label: "Day C",
-    kanji: "引",
-    muscles: "Pull — Back, Biceps",
+    label: "Back Thickness + Shoulders + Arms",
+    kanji: "肩",
+    muscles: "Back Thickness + Shoulders + Arms",
     color: "var(--accent-gold)",
   },
 ];
@@ -178,12 +178,6 @@ export function DayPicker({
                         style={{ color: "var(--text-primary)" }}
                       >
                         {dayInfo.label}
-                      </p>
-                      <p
-                        className="text-sm"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {dayInfo.muscles}
                       </p>
                       <p
                         className="text-xs mt-1"

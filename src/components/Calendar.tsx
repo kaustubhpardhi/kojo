@@ -18,9 +18,9 @@ interface CalendarProps {
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 
 const DAY_STAMPS: Record<DayType, string> = {
-  A: "脚",
-  B: "押",
-  C: "引",
+  A: "胸",
+  B: "脚",
+  C: "肩",
 };
 
 function getDaysInMonth(year: number, month: number) {

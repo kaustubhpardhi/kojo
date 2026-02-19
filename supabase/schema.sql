@@ -113,32 +113,37 @@ create policy "Users can update their own set logs"
   );
 
 -- ============================================
--- SEED EXERCISES
+-- SEED EXERCISES — Lean Bulk 3-Day (Mon/Wed/Fri)
 -- ============================================
+-- If replacing existing exercises: DELETE FROM public.exercises; then run inserts below.
 
--- Day A — Legs & Core
+-- Day A — Chest + Back + Arms (Monday)
 insert into public.exercises (day, "order", name, sets, rep_range_low, rep_range_high, is_priority, amrap_last_set, notes) values
-  ('A', 1, 'Barbell Squat',             4, 4, 6,   true,  true,  'Main compound. Brace hard, full depth.'),
-  ('A', 2, 'Romanian Deadlift',         3, 8, 10,  false, false, 'Hinge at hips, feel the hamstrings.'),
-  ('A', 3, 'Leg Press',                 3, 10, 12, false, false, 'Controlled tempo, full range.'),
-  ('A', 4, 'Leg Curl',                  3, 10, 12, false, false, 'Squeeze at the top.'),
-  ('A', 5, 'Calf Raise',               4, 12, 15, false, false, 'Pause at bottom stretch.'),
-  ('A', 6, 'Ab Rollout',               3, 8, 12,  false, false, 'Slow eccentric, tight core.');
+  ('A', 1, 'Flat Barbell Bench Press',    4, 6, 8,  true,  true,  '3s eccentric, explosive up. Retract scapula, drive feet, elbows 45–75°.'),
+  ('A', 2, 'Incline Dumbbell Press (30–45°)', 4, 10, 12, true,  false, 'Deep stretch at bottom, elbows 45°, squeeze at top. Don’t go steeper than 45°.'),
+  ('A', 3, 'Cable Chest Fly (Low to High)',  3, 15, 15, false, false, 'Arc motion, feel pec stretch. Superset with pull-ups.'),
+  ('A', 4, 'Weighted Pull-Ups / Lat Pulldown', 3, 6, 8, false, false, 'Depress & retract shoulders first. Elbows down to hips. Superset with fly.'),
+  ('A', 5, 'Barbell Bicep Curl',          3, 8, 10, false, false, 'Strict form, full ROM, pause at peak.'),
+  ('A', 6, 'Hammer Curl',                 2, 10, 12, false, false, 'Neutral grip. Controlled tempo, no momentum.'),
+  ('A', 7, 'Weighted Cable Crunches',    3, 15, 15, false, false, 'Round the spine, don’t pull neck. Abs not hip flexors.');
 
--- Day B — Push
+-- Day B — Legs + Posterior Chain + Rear Delts (Wednesday)
 insert into public.exercises (day, "order", name, sets, rep_range_low, rep_range_high, is_priority, amrap_last_set, notes) values
-  ('B', 1, 'Barbell Bench Press',       4, 4, 6,   true,  true,  'Main compound. Arch, leg drive, control.'),
-  ('B', 2, 'Incline Dumbbell Press',    3, 8, 10,  false, false, '30° incline, stretch at bottom.'),
-  ('B', 3, 'Overhead Press',            3, 6, 8,   true,  true,  'Strict form, no leg drive.'),
-  ('B', 4, 'Lateral Raise',             3, 12, 15, false, false, 'Light weight, control the negative.'),
-  ('B', 5, 'Tricep Pushdown',           3, 10, 12, false, false, 'Lock elbows, squeeze at bottom.'),
-  ('B', 6, 'Overhead Tricep Extension', 3, 10, 12, false, false, 'Deep stretch, full extension.');
+  ('B', 1, 'Barbell Back Squat',         4, 6, 8,  true,  true,  'Below parallel, full brace. Top set RPE 9, then 3 back-off at 85–90%.'),
+  ('B', 2, 'Romanian Deadlift',           3, 10, 12, false, false, 'Hips back, soft knee, bar close. Strong hamstring stretch at bottom.'),
+  ('B', 3, 'Bulgarian Split Squat',      3, 10, 10, false, false, 'Rear foot on bench. Torso upright, drive through front heel.'),
+  ('B', 4, 'Face Pulls (High Cable)',    4, 20, 20, false, false, 'Pull to forehead, full external rotation. Range of motion over load.'),
+  ('B', 5, 'Standing Calf Raises',       4, 15, 20, false, false, 'Full ROM, pause at stretch, control negative.'),
+  ('B', 6, 'Seated Calf Raises',         4, 15, 20, false, false, 'Knee flexed = soleus. Go slow, full stretch.'),
+  ('B', 7, 'Hanging Leg Raises',         3, 8, 15, false, false, 'To failure, controlled. Posterior pelvic tilt at top.');
 
--- Day C — Pull
+-- Day C — Back Thickness + Shoulders + Arms (Friday)
 insert into public.exercises (day, "order", name, sets, rep_range_low, rep_range_high, is_priority, amrap_last_set, notes) values
-  ('C', 1, 'Barbell Row',               4, 4, 6,   true,  true,  'Main compound. Chest to bar, squeeze back.'),
-  ('C', 2, 'Pull-Up / Lat Pulldown',    3, 6, 10,  false, false, 'Full range, dead hang at bottom.'),
-  ('C', 3, 'Cable Row',                 3, 10, 12, false, false, 'Squeeze shoulder blades together.'),
-  ('C', 4, 'Face Pull',                 3, 15, 20, false, false, 'Externally rotate at the top.'),
-  ('C', 5, 'Barbell Curl',              3, 8, 10,  false, false, 'No swinging, strict form.'),
-  ('C', 6, 'Hammer Curl',               3, 10, 12, false, false, 'Neutral grip, control both phases.');
+  ('C', 1, 'Barbell Overhead Press',     4, 6, 8,  true,  true,  'Warm shoulders first. Glutes squeezed, straight bar path, full lockout.'),
+  ('C', 2, 'Seated Cable Rows',          4, 10, 12, false, false, 'Pull to lower chest. Full scap retraction, chest tall.'),
+  ('C', 3, 'Single-Arm Dumbbell Row',   3, 10, 12, false, false, 'Elbow toward hip. Mid-back thickness.'),
+  ('C', 4, 'Cable Lateral Raises',      4, 15, 20, false, false, 'Slight forward lean, lead with elbow.'),
+  ('C', 5, 'Low-to-High Cable Fly',      2, 15, 20, false, false, 'Upper chest finisher. Squeeze at top, controlled.'),
+  ('C', 6, 'Barbell Bicep Curl',         3, 8, 10, false, false, 'Superset with triceps. Strict, full ROM.'),
+  ('C', 7, 'Overhead Triceps Extension', 3, 10, 12, false, false, 'Full stretch at bottom. Long head. Superset with curl.'),
+  ('C', 8, 'Cable Pushdown',             2, 12, 15, false, false, 'Full extension, squeeze lockout. Finisher.');

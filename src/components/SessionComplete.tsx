@@ -11,11 +11,11 @@ interface SessionCompleteProps {
   streakCount: number;
 }
 
-const DAY_KANJI: Record<DayType, string> = { A: "脚", B: "押", C: "引" };
+const DAY_KANJI: Record<DayType, string> = { A: "胸", B: "脚", C: "肩" };
 const DAY_NAMES: Record<DayType, string> = {
-  A: "Legs & Core",
-  B: "Push",
-  C: "Pull",
+  A: "Chest + Back + Arms",
+  B: "Legs + Posterior Chain",
+  C: "Back + Shoulders + Arms",
 };
 
 export function SessionComplete({
@@ -93,7 +93,7 @@ export function SessionComplete({
           className="text-sm mb-8"
           style={{ color: "var(--text-secondary)" }}
         >
-          Day {day} — {DAY_NAMES[day]}
+          {DAY_NAMES[day]}
         </motion.p>
 
         {/* Stats */}

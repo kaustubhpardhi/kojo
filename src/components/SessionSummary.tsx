@@ -9,11 +9,11 @@ interface SessionSummaryProps {
   onClose: () => void;
 }
 
-const DAY_KANJI: Record<string, string> = { A: "脚", B: "押", C: "引" };
+const DAY_KANJI: Record<string, string> = { A: "胸", B: "脚", C: "肩" };
 const DAY_LABELS: Record<string, string> = {
-  A: "Legs & Core",
-  B: "Push",
-  C: "Pull",
+  A: "Chest + Back + Arms",
+  B: "Legs + Posterior Chain",
+  C: "Back + Shoulders + Arms",
 };
 
 export function SessionSummary({
@@ -105,7 +105,7 @@ export function SessionSummary({
                   className="font-bold text-lg"
                   style={{ color: "var(--text-primary)" }}
                 >
-                  Day {session.day} — {DAY_LABELS[session.day]}
+                  {DAY_LABELS[session.day]}
                 </h3>
                 <p
                   className="text-sm"
