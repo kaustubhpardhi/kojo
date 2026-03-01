@@ -5,6 +5,8 @@ import { LoadingStripes } from "./LoadingStripes";
 import { StrengthView } from "./views/StrengthView";
 import { VolumeView } from "./views/VolumeView";
 import { ConsistencyView } from "./views/ConsistencyView";
+import { AmrapView } from "./views/AmrapView";
+import { PersonalBestsView } from "./views/PersonalBestsView";
 
 interface VisualisationCanvasProps {
   activeChip: ProgressChipId;
@@ -27,6 +29,12 @@ export function VisualisationCanvas({
   }
   if (activeChip === "consistency") {
     return <ConsistencyView userId={userId} />;
+  }
+  if (activeChip === "amrap") {
+    return <AmrapView userId={userId} />;
+  }
+  if (activeChip === "personal-bests") {
+    return <PersonalBestsView userId={userId} />;
   }
 
   return (

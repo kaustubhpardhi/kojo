@@ -7,7 +7,6 @@ const CHIPS: { id: ProgressChipId; label: string }[] = [
   { id: "volume", label: "VOLUME" },
   { id: "consistency", label: "CONSISTENCY" },
   { id: "amrap", label: "AMRAP" },
-  { id: "frequency", label: "FREQUENCY" },
   { id: "personal-bests", label: "PERSONAL BESTS" },
 ];
 

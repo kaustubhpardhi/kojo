@@ -19,10 +19,6 @@ import type {
   AmrapViewData,
   AmrapDataPoint,
   AmrapCallout,
-  FrequencyViewData,
-  FrequencyDayBar,
-  FrequencyWeekPoint,
-  FrequencyCallout,
   PersonalBestsViewData,
   PersonalBestRow,
 } from "./types/progress";
@@ -78,7 +74,7 @@ export async function getProgressExercises(): Promise<Exercise[]> {
 }
 
 /** Exercises where amrap_last_set = true, for AMRAP view selector. */
-export async function getAmrapExercises(): Promise<Exercise[]> {
+export async function getAmrapExercises(_userId?: string): Promise<Exercise[]> {
   const { data, error } = await supabase
     .from("exercises")
     .select("*")
@@ -411,15 +407,16 @@ export async function getAmrapData(
     .in("session_id", sessionIds);
 
   if (lErr) throw lErr;
-  const logs = (logsData || []) as { session_id: string; reps: number }[];
+  const logs = (logsData || []) as { session_id: string; reps: number | string }[];
 
   const byDate = new Map<string, number>();
   for (const log of logs) {
     const date = dateBySessionId.get(log.session_id);
     if (!date) continue;
+    const reps = Number(log.reps);
     const existing = byDate.get(date);
-    if (existing == null || log.reps > existing) {
-      byDate.set(date, log.reps);
+    if (existing == null || reps > existing) {
+      byDate.set(date, reps);
     }
   }
 
@@ -448,83 +445,14 @@ export async function getAmrapData(
   };
 }
 
-// ─── 5. FREQUENCY ─────────────────────────────────────────────────────────
-
-const TARGET_SESSIONS_PER_WEEK = 3;
+// ─── 5. PERSONAL BESTS ─────────────────────────────────────────────────────
 
 /**
- * Fetches completed sessions; groups by week and by day letter; builds
- * 12-week line + A/B/C bars + callout.
+ * For each exercise, finds the single set_log row with the highest weight
+ * (then best reps at that weight), joined with session date. Returns list
+ * sorted by most recently achieved PR first. isNew if PR in last 7 days.
  */
-export async function getFrequencyData(
-  userId: string,
-): Promise<FrequencyViewData> {
-  const { data: sessionsData, error: e } = await supabase
-    .from("sessions")
-    .select("date, day")
-    .eq("user_id", userId)
-    .not("completed_at", "is", null)
-    .order("date");
-
-  if (e) throw e;
-  const sessions = (sessionsData || []) as { date: string; day: DayType }[];
-
-  const byWeek = new Map<string, number>();
-  const byDay = new Map<DayType, number[]>();
-  for (const s of sessions) {
-    const weekStart = getISOWeekStart(s.date);
-    byWeek.set(weekStart, (byWeek.get(weekStart) || 0) + 1);
-    if (!byDay.has(s.day)) byDay.set(s.day, []);
-    byDay.get(s.day)!.push(1);
-  }
-
-  const weekStarts = [...byWeek.keys()].sort();
-  const last12 = weekStarts.slice(-12);
-  const weeklyLine: FrequencyWeekPoint[] = last12.map((weekStart, i) => ({
-    weekLabel: `W${i + 1}`,
-    weekStart,
-    sessionsCount: byWeek.get(weekStart) || 0,
-  }));
-
-  const totalWeeks = weekStarts.length || 1;
-  const dayBars: FrequencyDayBar[] = (["A", "B", "C"] as DayType[]).map(
-    (day) => {
-      const count = (byDay.get(day) || []).length;
-      const sessionsPerWeek =
-        totalWeeks > 0 ? Math.round((count / totalWeeks) * 100) / 100 : 0;
-      return { day, sessionsPerWeek };
-    },
-  );
-
-  const totalSessions = sessions.length;
-  const now = new Date();
-  const thisMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const thisMonth = sessions.filter((s) => s.date >= thisMonthStart).length;
-  const avgPerWeek = weekStarts.length
-    ? totalSessions / weekStarts.length
-    : 0;
-
-  const callout: FrequencyCallout = {
-    totalSessions,
-    thisMonth,
-    avgPerWeek: Math.round(avgPerWeek * 100) / 100,
-  };
-
-  return {
-    dayBars,
-    weeklyLine,
-    targetSessionsPerWeek: TARGET_SESSIONS_PER_WEEK,
-    callout,
-  };
-}
-
-// ─── 6. PERSONAL BESTS ────────────────────────────────────────────────────
-
-/**
- * For each exercise, finds the set_log with highest weight (then reps);
- * returns list sorted by PR date descending; isNew if in last 7 days.
- */
-export async function getPersonalBestsData(
+export async function getPersonalBests(
   userId: string,
 ): Promise<PersonalBestsViewData> {
   const { data: exercisesData, error: exErr } = await supabase
@@ -558,8 +486,8 @@ export async function getPersonalBestsData(
   const logs = (logsData || []) as {
     session_id: string;
     exercise_id: string;
-    weight: number;
-    reps: number;
+    weight: number | string;
+    reps: number | string;
   }[];
 
   const byExercise = new Map<
@@ -568,18 +496,16 @@ export async function getPersonalBestsData(
   >();
   for (const log of logs) {
     const date = dateBySessionId.get(log.session_id)!;
+    const weight = Number(log.weight);
+    const reps = Number(log.reps);
     const key = log.exercise_id;
     const existing = byExercise.get(key);
     if (
       !existing ||
-      log.weight > existing.weight ||
-      (log.weight === existing.weight && log.reps > existing.reps)
+      weight > existing.weight ||
+      (weight === existing.weight && reps > existing.reps)
     ) {
-      byExercise.set(key, {
-        weight: log.weight,
-        reps: log.reps,
-        date,
-      });
+      byExercise.set(key, { weight, reps, date });
     }
   }
 
@@ -604,4 +530,280 @@ export async function getPersonalBestsData(
   items.sort((a, b) => b.date.localeCompare(a.date));
 
   return { items };
+}
+
+// ─── Export data ───────────────────────────────────────────────────────────
+
+export interface LiftingExportData {
+  exportedAt: string;
+  summary: {
+    totalSessions: number;
+    totalSetsLogged: number;
+    trainingPeriodDays: number;
+    firstSessionDate: string;
+    lastSessionDate: string;
+  };
+  exercises: {
+    name: string;
+    isPriority: boolean;
+    repRange: string;
+    personalBest: {
+      weight: number;
+      reps: number;
+      estimatedOneRM: number;
+      achievedOn: string;
+    };
+    progression: {
+      firstLoggedWeight: number;
+      currentBestWeight: number;
+      weightGainedKg: number;
+      daysToAchieve: number;
+      progressionRateKgPerWeek: number;
+    };
+    sessions: {
+      date: string;
+      sets: { setNumber: number; weight: number; reps: number; isAmrap: boolean }[];
+      sessionVolume: number;
+      estimatedOneRM: number;
+    }[];
+    amrapHistory: {
+      date: string;
+      reps: number;
+      weight: number;
+      isPersonalBest: boolean;
+    }[];
+  }[];
+  sessionHistory: {
+    date: string;
+    day: DayType;
+    totalVolume: number;
+    exercisesLogged: number;
+    completedAt: string;
+  }[];
+}
+
+/**
+ * Fetches sessions, exercises, and set_logs in parallel (sessions first, then
+ * exercises + set_logs), then assembles the full lifting export JSON structure.
+ */
+export async function buildExportData(userId: string): Promise<LiftingExportData> {
+  const today = toDateStr(new Date());
+
+  const { data: sessionsData, error: sErr } = await supabase
+    .from("sessions")
+    .select("id, date, day, completed_at")
+    .eq("user_id", userId)
+    .not("completed_at", "is", null)
+    .order("date");
+  if (sErr) throw sErr;
+  const sessions = (sessionsData || []) as {
+    id: string;
+    date: string;
+    day: DayType;
+    completed_at: string | null;
+  }[];
+
+  const sessionIds = sessions.map((s) => s.id);
+  const sessionById = new Map(sessions.map((s) => [s.id, s]));
+
+  const [exercisesRes, logsRes] = await Promise.all([
+    supabase.from("exercises").select("*").order("day").order("order"),
+    sessionIds.length > 0
+      ? supabase
+          .from("set_logs")
+          .select("session_id, exercise_id, set_number, weight, reps, is_amrap")
+          .in("session_id", sessionIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (exercisesRes.error) throw exercisesRes.error;
+  const exercises = (exercisesRes.data || []) as Exercise[];
+  if (logsRes.error) throw logsRes.error;
+  const logs = (logsRes.data || []) as {
+    session_id: string;
+    exercise_id: string;
+    set_number: number;
+    weight: number | string;
+    reps: number | string;
+    is_amrap: boolean;
+  }[];
+
+  const logsNormalized = logs.map((l) => ({
+    session_id: l.session_id,
+    exercise_id: l.exercise_id,
+    set_number: l.set_number,
+    weight: Number(l.weight),
+    reps: Number(l.reps),
+    is_amrap: !!l.is_amrap,
+  }));
+
+  const totalSessions = sessions.length;
+  const totalSetsLogged = logsNormalized.length;
+  const firstSessionDate = sessions.length > 0 ? sessions[0].date : "";
+  const lastSessionDate = sessions.length > 0 ? sessions[sessions.length - 1].date : "";
+  const trainingPeriodDays =
+    firstSessionDate && lastSessionDate
+      ? Math.max(
+          0,
+          Math.round(
+            (new Date(lastSessionDate).getTime() - new Date(firstSessionDate).getTime()) /
+              86400000,
+          ) + 1,
+        )
+      : 0;
+
+  const logsBySession = new Map<string, typeof logsNormalized>();
+  for (const log of logsNormalized) {
+    if (!logsBySession.has(log.session_id)) logsBySession.set(log.session_id, []);
+    logsBySession.get(log.session_id)!.push(log);
+  }
+
+  const logsByExercise = new Map<string, typeof logsNormalized>();
+  for (const log of logsNormalized) {
+    if (!logsByExercise.has(log.exercise_id)) logsByExercise.set(log.exercise_id, []);
+    logsByExercise.get(log.exercise_id)!.push(log);
+  }
+
+  const exerciseIdsWithData = new Set(logsByExercise.keys());
+  const exercisesWithData = exercises.filter((e) => exerciseIdsWithData.has(e.id));
+
+  const sessionHistory = sessions.map((s) => {
+    const setLogsForSession = logsBySession.get(s.id) || [];
+    const totalVolume = setLogsForSession.reduce(
+      (sum, l) => sum + l.weight * l.reps,
+      0,
+    );
+    const exercisesLogged = new Set(setLogsForSession.map((l) => l.exercise_id)).size;
+    return {
+      date: s.date,
+      day: s.day,
+      totalVolume: Math.round(totalVolume),
+      exercisesLogged,
+      completedAt: s.completed_at || "",
+    };
+  });
+
+  const exercisesExport = exercisesWithData.map((ex) => {
+    const exerciseLogs = (logsByExercise.get(ex.id) || []).slice();
+    const dates = [...new Set(exerciseLogs.map((l) => sessionById.get(l.session_id)!.date))].sort();
+
+    let bestWeight = 0;
+    let bestReps = 0;
+    let bestDate = "";
+    for (const log of exerciseLogs) {
+      const d = sessionById.get(log.session_id)!.date;
+      if (
+        log.weight > bestWeight ||
+        (log.weight === bestWeight && log.reps > bestReps)
+      ) {
+        bestWeight = log.weight;
+        bestReps = log.reps;
+        bestDate = d;
+      }
+    }
+    const estimatedOneRMBest = bestWeight > 0 ? EPLEY(bestWeight, bestReps) : 0;
+
+    const firstDate = dates[0] || "";
+    const firstSessionLogs = firstDate
+      ? exerciseLogs.filter((l) => sessionById.get(l.session_id)!.date === firstDate)
+      : [];
+    const firstLoggedWeight =
+      firstSessionLogs.length > 0
+        ? Math.max(...firstSessionLogs.map((l) => l.weight))
+        : 0;
+    const daysToAchieve =
+      firstDate && bestDate
+        ? Math.max(
+            0,
+            Math.round(
+              (new Date(bestDate).getTime() - new Date(firstDate).getTime()) / 86400000,
+            ),
+          )
+        : 0;
+    const weightGainedKg = Math.max(0, bestWeight - firstLoggedWeight);
+    const progressionRateKgPerWeek =
+      daysToAchieve > 0 ? Math.round((weightGainedKg / (daysToAchieve / 7)) * 10) / 10 : 0;
+
+    const sessionsByDate = new Map<string, typeof exerciseLogs>();
+    for (const log of exerciseLogs) {
+      const d = sessionById.get(log.session_id)!.date;
+      if (!sessionsByDate.has(d)) sessionsByDate.set(d, []);
+      sessionsByDate.get(d)!.push(log);
+    }
+
+    const exerciseSessions = dates.map((date) => {
+      const sets = sessionsByDate.get(date) || [];
+      const sessionVolume = sets.reduce((s, l) => s + l.weight * l.reps, 0);
+      const estimatedOneRM =
+        sets.length > 0
+          ? Math.max(...sets.map((l) => EPLEY(l.weight, l.reps)))
+          : 0;
+      return {
+        date,
+        sets: sets
+          .sort((a, b) => a.set_number - b.set_number)
+          .map((l) => ({
+            setNumber: l.set_number,
+            weight: l.weight,
+            reps: l.reps,
+            isAmrap: l.is_amrap,
+          })),
+        sessionVolume: Math.round(sessionVolume),
+        estimatedOneRM: Math.round(estimatedOneRM * 10) / 10,
+      };
+    });
+
+    const amrapLogs = exerciseLogs
+      .filter((l) => l.is_amrap)
+      .map((l) => ({
+        ...l,
+        date: sessionById.get(l.session_id)!.date,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    let amrapBestReps = 0;
+    const amrapHistory = amrapLogs.map((entry) => {
+      const isPersonalBest = entry.reps > amrapBestReps;
+      if (entry.reps > amrapBestReps) amrapBestReps = entry.reps;
+      return {
+        date: entry.date,
+        reps: entry.reps,
+        weight: entry.weight,
+        isPersonalBest,
+      };
+    });
+
+    return {
+      name: ex.name,
+      isPriority: ex.is_priority,
+      repRange: `${ex.rep_range_low}-${ex.rep_range_high}`,
+      personalBest: {
+        weight: bestWeight,
+        reps: bestReps,
+        estimatedOneRM: Math.round(estimatedOneRMBest * 10) / 10,
+        achievedOn: bestDate,
+      },
+      progression: {
+        firstLoggedWeight: firstLoggedWeight,
+        currentBestWeight: bestWeight,
+        weightGainedKg,
+        daysToAchieve,
+        progressionRateKgPerWeek,
+      },
+      sessions: exerciseSessions,
+      amrapHistory,
+    };
+  });
+
+  return {
+    exportedAt: today,
+    summary: {
+      totalSessions,
+      totalSetsLogged,
+      trainingPeriodDays,
+      firstSessionDate,
+      lastSessionDate,
+    },
+    exercises: exercisesExport,
+    sessionHistory,
+  };
 }

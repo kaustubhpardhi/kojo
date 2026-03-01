@@ -3,8 +3,6 @@
  * Used by progress hooks and components.
  */
 
-import type { DayType } from "../database.types";
-
 // ─── Chip / navigation ─────────────────────────────────────────────────────
 
 export type ProgressChipId =
@@ -12,7 +10,6 @@ export type ProgressChipId =
   | "volume"
   | "consistency"
   | "amrap"
-  | "frequency"
   | "personal-bests";
 
 // ─── STRENGTH ──────────────────────────────────────────────────────────────
@@ -98,34 +95,6 @@ export interface AmrapViewData {
   callout: AmrapCallout;
 }
 
-// ─── FREQUENCY ─────────────────────────────────────────────────────────────
-
-/** Sessions per week averaged per day letter (A, B, C). */
-export interface FrequencyDayBar {
-  day: DayType;
-  sessionsPerWeek: number;
-}
-
-/** Sessions per week over the last 12 weeks (for the line chart). */
-export interface FrequencyWeekPoint {
-  weekLabel: string;
-  weekStart: string; // YYYY-MM-DD
-  sessionsCount: number;
-}
-
-export interface FrequencyCallout {
-  totalSessions: number;
-  thisMonth: number;
-  avgPerWeek: number;
-}
-
-export interface FrequencyViewData {
-  dayBars: FrequencyDayBar[];
-  weeklyLine: FrequencyWeekPoint[];
-  targetSessionsPerWeek: number;
-  callout: FrequencyCallout;
-}
-
 // ─── PERSONAL BESTS ───────────────────────────────────────────────────────
 
 /** One row: exercise + all-time best weight+reps + date; isNew if PR in last 7 days. */
@@ -149,7 +118,6 @@ export type ProgressViewData =
   | { chip: "volume"; data: VolumeViewData }
   | { chip: "consistency"; data: ConsistencyViewData }
   | { chip: "amrap"; data: AmrapViewData }
-  | { chip: "frequency"; data: FrequencyViewData }
   | { chip: "personal-bests"; data: PersonalBestsViewData };
 
 /** Generic result shape for progress data hooks. */

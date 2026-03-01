@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getPersonalBestsData } from "@/lib/progress-queries";
+import { getPersonalBests } from "@/lib/progress-queries";
 import type { PersonalBestsViewData } from "@/lib/types/progress";
 import type { ProgressDataResult } from "@/lib/types/progress";
 
@@ -25,7 +25,7 @@ export function usePersonalBestsData(
     setLoading(true);
     setError(null);
 
-    getPersonalBestsData(userId)
+    getPersonalBests(userId)
       .then((result) => {
         if (!cancelled) setData(result);
       })
