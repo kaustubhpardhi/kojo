@@ -101,7 +101,7 @@ export function AmrapView({ userId }: AmrapViewProps) {
     return [
       { x: series[0].date, y: y0 },
       { x: series[series.length - 1].date, y: y1 },
-    ];
+    ] as const;
   }, [amrapData?.series]);
 
   if (loading) {
@@ -202,7 +202,7 @@ export function AmrapView({ userId }: AmrapViewProps) {
                     border: "1px solid #3A3A3A",
                   }}
                   labelStyle={{ color: "#3A3A3A", fontSize: 10 }}
-                  formatter={(value: number) => [value, "Reps"]}
+                  formatter={(value: number | undefined) => [value ?? "--", "Reps"]}
                   labelFormatter={(label) => formatChartDate(label)}
                 />
                 {trendSegment && (
