@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
 
 interface SetInputProps {
   setNumber: number;
@@ -16,6 +16,14 @@ interface SetInputProps {
   onComplete: () => void;
 }
 
+const WEIGHT_STEP = 2.5;
+const REPS_STEP = 1;
+
+function parseNum(s: string): number {
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export function SetInput({
   setNumber,
   totalSets,
@@ -29,176 +37,140 @@ export function SetInput({
   onRepsChange,
   onComplete,
 }: SetInputProps) {
+  const [showPrFlash, setShowPrFlash] = useState(false);
+
   const canComplete =
     weight !== "" && reps !== "" && Number(weight) >= 0 && Number(reps) > 0;
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-      className="rounded-xl p-4 relative"
-      style={{
-        background: isAmrap ? "var(--amrap-bg)" : "var(--bg-card)",
-        border: isAmrap
-          ? "1px solid var(--amrap-color)"
-          : "1px solid var(--border-subtle)",
-        boxShadow: isAmrap ? "0 0 20px var(--amrap-bg)" : "var(--shadow-sm)",
-      }}
-    >
-      {/* Set header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span
-            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-            style={{
-              background: isCompleted
-                ? "var(--success)"
-                : "var(--bg-secondary)",
-              color: isCompleted ? "#fff" : "var(--text-secondary)",
-            }}
-          >
-            {isCompleted ? "✓" : setNumber}
-          </span>
-          <span
-            className="text-sm font-medium"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            Set {setNumber} of {totalSets}
-          </span>
-        </div>
+  const currentWeight = parseNum(weight);
+  const currentReps = parseNum(reps);
+  const deltaWeight =
+    previousWeight !== undefined && currentWeight > previousWeight
+      ? currentWeight - previousWeight
+      : null;
+  const deltaReps =
+    previousReps !== undefined && currentReps > previousReps
+      ? currentReps - previousReps
+      : null;
 
-        {isAmrap && (
-          <motion.span
-            initial={{ scale: 0, rotate: -10 }}
-            animate={{ scale: 1, rotate: 0 }}
-            className="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider animate-glow-pulse"
-            style={{
-              background: "var(--amrap-bg)",
-              color: "var(--amrap-color)",
-              border: "1px solid var(--amrap-color)",
-            }}
-          >
-            ∞ AMRAP
-          </motion.span>
-        )}
+  useEffect(() => {
+    if (!isCompleted || showPrFlash) return;
+    const w = parseNum(weight);
+    const r = parseNum(reps);
+    const beatWeight = previousWeight !== undefined && w > previousWeight;
+    const beatReps = previousReps !== undefined && r > previousReps;
+    if (beatWeight || beatReps) {
+      setShowPrFlash(true);
+      const t = setTimeout(() => setShowPrFlash(false), 100);
+      return () => clearTimeout(t);
+    }
+  }, [isCompleted, weight, reps, previousWeight, previousReps, showPrFlash]);
+
+  const stepWeight = (delta: number) => {
+    const next = (parseNum(weight) || previousWeight || 0) + delta;
+    onWeightChange(String(Math.max(0, Math.round(next * 10) / 10)));
+  };
+
+  const stepReps = (delta: number) => {
+    const next = (parseNum(reps) || previousReps || 0) + delta;
+    onRepsChange(String(Math.max(0, Math.round(next))));
+  };
+
+  const isActive = !isCompleted;
+
+  return (
+    <div
+      className={`border-b border-[#3A3A3A] flex items-stretch border-l-4 ${isActive ? "border-l-[#C8FF00]" : "border-l-[#3A3A3A]"}`}
+      style={{ transition: "opacity 100ms ease", ...(showPrFlash ? { opacity: 0.7 } : {}) }}
+    >
+      <div className="w-12 flex items-center justify-center border-r border-[#3A3A3A] py-3 font-mono text-sm font-bold text-[#F2F2F0] shrink-0">
+        {setNumber}
       </div>
 
-      {/* Inputs */}
-      <div className="flex gap-3">
-        {/* Weight */}
-        <div className="flex-1">
-          <label
-            className="text-[10px] uppercase tracking-widest block mb-1.5"
-            style={{ color: "var(--text-tertiary)" }}
+      <div className="flex-1 min-w-0 flex items-center border-r border-[#3A3A3A] px-2">
+        <div className="flex items-center w-full">
+          <button
+            type="button"
+            onClick={() => stepWeight(-WEIGHT_STEP)}
+            disabled={isCompleted}
+            className="tap-flash w-10 h-10 flex items-center justify-center text-[#3A3A3A] font-bold text-lg disabled:opacity-40"
+            aria-label="Decrease weight"
           >
-            Weight (kg)
-          </label>
-          <div className="relative">
+            −
+          </button>
+          <div className="relative flex-1 flex justify-center">
             <input
               type="number"
               inputMode="decimal"
               value={weight}
               onChange={(e) => onWeightChange(e.target.value)}
               disabled={isCompleted}
-              placeholder={
-                previousWeight !== undefined ? String(previousWeight) : "0"
-              }
-              className="w-full py-3 px-4 rounded-xl text-xl font-bold text-center tabular-nums transition-all disabled:opacity-50"
-              style={{
-                background: "var(--bg-secondary)",
-                border: "1px solid var(--border-color)",
-                color: "var(--text-primary)",
-              }}
+              placeholder={previousWeight !== undefined ? String(previousWeight) : "0"}
+              className="w-full max-w-[80px] py-2 text-center font-mono text-lg font-bold tabular-nums bg-transparent border-none text-[#F2F2F0] focus:outline-none focus:ring-0 disabled:opacity-60"
             />
             {previousWeight !== undefined && !isCompleted && !weight && (
-              <span
-                className="absolute left-0 right-0 top-1/2 -translate-y-1/2 text-center text-xl font-bold pointer-events-none"
-                style={{ color: "var(--text-ghost)" }}
-              >
+              <span className="absolute inset-0 flex items-center justify-center font-mono text-sm text-[#3A3A3A] pointer-events-none">
                 {previousWeight}
               </span>
             )}
           </div>
-          {previousWeight !== undefined && (
-            <p
-              className="text-[10px] mt-1 text-center"
-              style={{ color: "var(--text-ghost)" }}
-            >
-              last: {previousWeight} kg
-            </p>
-          )}
-        </div>
-
-        {/* Reps */}
-        <div className="flex-1">
-          <label
-            className="text-[10px] uppercase tracking-widest block mb-1.5"
-            style={{ color: "var(--text-tertiary)" }}
+          <button
+            type="button"
+            onClick={() => stepWeight(WEIGHT_STEP)}
+            disabled={isCompleted}
+            className="tap-flash w-10 h-10 flex items-center justify-center text-[#3A3A3A] font-bold text-lg disabled:opacity-40"
+            aria-label="Increase weight"
           >
-            {isAmrap ? "Reps (no limit)" : "Reps"}
-          </label>
-          <div className="relative">
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 min-w-0 flex items-center px-2">
+        <div className="flex items-center w-full">
+          <button
+            type="button"
+            onClick={() => stepReps(-REPS_STEP)}
+            disabled={isCompleted}
+            className="tap-flash w-10 h-10 flex items-center justify-center text-[#3A3A3A] font-bold text-lg disabled:opacity-40"
+            aria-label="Decrease reps"
+          >
+            −
+          </button>
+          <div className="relative flex-1 flex justify-center">
             <input
               type="number"
               inputMode="numeric"
               value={reps}
               onChange={(e) => onRepsChange(e.target.value)}
               disabled={isCompleted}
-              placeholder={
-                previousReps !== undefined ? String(previousReps) : "0"
-              }
-              className="w-full py-3 px-4 rounded-xl text-xl font-bold text-center tabular-nums transition-all disabled:opacity-50"
-              style={{
-                background: "var(--bg-secondary)",
-                border: "1px solid var(--border-color)",
-                color: "var(--text-primary)",
-              }}
+              placeholder={previousReps !== undefined ? String(previousReps) : "0"}
+              className="w-full max-w-[80px] py-2 text-center font-mono text-lg font-bold tabular-nums bg-transparent border-none text-[#F2F2F0] focus:outline-none focus:ring-0 disabled:opacity-60"
             />
             {previousReps !== undefined && !isCompleted && !reps && (
-              <span
-                className="absolute left-0 right-0 top-1/2 -translate-y-1/2 text-center text-xl font-bold pointer-events-none"
-                style={{ color: "var(--text-ghost)" }}
-              >
+              <span className="absolute inset-0 flex items-center justify-center font-mono text-sm text-[#3A3A3A] pointer-events-none">
                 {previousReps}
               </span>
             )}
           </div>
-          {previousReps !== undefined && (
-            <p
-              className="text-[10px] mt-1 text-center"
-              style={{ color: "var(--text-ghost)" }}
-            >
-              last: {previousReps}
-            </p>
-          )}
+          <button
+            type="button"
+            onClick={() => stepReps(REPS_STEP)}
+            disabled={isCompleted}
+            className="tap-flash w-10 h-10 flex items-center justify-center text-[#3A3A3A] font-bold text-lg disabled:opacity-40"
+            aria-label="Increase reps"
+          >
+            +
+          </button>
         </div>
       </div>
 
-      {/* Log Set button */}
-      <AnimatePresence>
-        {!isCompleted && (
-          <motion.button
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            onClick={onComplete}
-            disabled={!canComplete}
-            whileTap={{ scale: 0.97 }}
-            className="w-full mt-4 py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-30"
-            style={{
-              background: canComplete
-                ? "var(--accent-primary)"
-                : "var(--bg-secondary)",
-              color: canComplete ? "#fff" : "var(--text-tertiary)",
-              boxShadow: canComplete ? "var(--shadow-md)" : "none",
-            }}
-          >
-            {isAmrap ? "Lock In AMRAP 🔥" : `Log Set ${setNumber} →`}
-          </motion.button>
-        )}
-      </AnimatePresence>
-    </motion.div>
+      {isCompleted && (deltaWeight !== null || deltaReps !== null) && (
+        <div className="hidden sm:flex items-center gap-2 px-2 border-l border-[#3A3A3A] text-[10px] font-mono text-[#C8FF00]">
+          {deltaWeight !== null && deltaWeight > 0 && <span>+{deltaWeight} kg</span>}
+          {deltaReps !== null && deltaReps > 0 && <span>+{deltaReps}</span>}
+        </div>
+      )}
+    </div>
   );
 }

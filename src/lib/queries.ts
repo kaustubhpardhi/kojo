@@ -41,6 +41,26 @@ export async function getSessionsByMonth(
   return data || [];
 }
 
+/** All sessions for the month (completed + in-progress) for calendar and opening partial sessions */
+export async function getSessionsForMonth(
+  userId: string,
+  year: number,
+  month: number,
+): Promise<Session[]> {
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date");
+  if (error) throw error;
+  return data || [];
+}
+
 export async function getLastSession(
   userId: string,
   day: DayType,
@@ -67,6 +87,22 @@ export async function getLastDayDates(
     result[day] = session?.date || null;
   }
   return result;
+}
+
+export async function getMostRecentCompletedSession(
+  userId: string,
+): Promise<SessionWithLogs | null> {
+  const { data: session, error: sErr } = await supabase
+    .from("sessions")
+    .select("*")
+    .eq("user_id", userId)
+    .not("completed_at", "is", null)
+    .order("date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (sErr) throw sErr;
+  if (!session) return null;
+  return getSessionDetail((session as Session).id);
 }
 
 export async function createSession(
@@ -207,60 +243,64 @@ export async function getExercisesWithPrevious(
   }));
 }
 
-// ─── Streaks ──────────────────────────────────────────
+// ─── Streaks (week-based) ────────────────────────────
+
+/** Monday of the ISO week for dateStr (YYYY-MM-DD). */
+function getISOWeekStart(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(d);
+  monday.setDate(diff);
+  return monday.toISOString().split("T")[0];
+}
+
+/** Add days to YYYY-MM-DD, return YYYY-MM-DD. */
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
+/**
+ * Streaks are consecutive weeks with at least one completed session.
+ * Current = unbroken weeks up to and including the current/most recent week.
+ * Longest = longest run of such weeks ever.
+ */
 export async function getStreaks(userId: string): Promise<StreakData> {
   const { data: sessionsData, error } = await supabase
     .from("sessions")
     .select("date")
     .eq("user_id", userId)
     .not("completed_at", "is", null)
-    .order("date", { ascending: false });
+    .order("date");
   if (error) throw error;
   const sessions = (sessionsData || []) as { date: string }[];
   if (sessions.length === 0) return { current: 0, longest: 0 };
 
-  // Get unique dates
-  const uniqueDates = [...new Set(sessions.map((s) => s.date))]
-    .sort()
-    .reverse();
+  const uniqueDates = [...new Set(sessions.map((s) => s.date))];
+  const weekStarts = new Set(uniqueDates.map((d) => getISOWeekStart(d)));
+  const sortedWeeks = [...weekStarts].sort();
 
-  // Calculate current streak (consecutive days from today)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  if (sortedWeeks.length === 0) return { current: 0, longest: 0 };
+
+  const mostRecentWeek = sortedWeeks[sortedWeeks.length - 1];
+
+  // Current streak: count backwards from most recent week
   let currentStreak = 0;
-  const checkDate = new Date(today);
-
-  for (const dateStr of uniqueDates) {
-    const sessionDate = new Date(dateStr + "T00:00:00");
-    const diffDays = Math.floor(
-      (checkDate.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    if (diffDays === 0) {
-      currentStreak++;
-      checkDate.setDate(checkDate.getDate() - 1);
-    } else if (diffDays === 1 && currentStreak === 0) {
-      // Yesterday counts as current streak start
-      currentStreak++;
-      checkDate.setDate(checkDate.getDate() - 2);
-    } else {
-      break;
-    }
+  let d = mostRecentWeek;
+  while (weekStarts.has(d)) {
+    currentStreak++;
+    d = addDays(d, -7);
   }
 
-  // Calculate longest streak
-  let longest = 0;
+  // Longest streak: longest run of consecutive weeks in sorted list
+  let longest = 1;
   let streak = 1;
-  const sortedDates = [...new Set(sessions.map((s) => s.date))].sort();
-
-  for (let i = 1; i < sortedDates.length; i++) {
-    const prev = new Date(sortedDates[i - 1] + "T00:00:00");
-    const curr = new Date(sortedDates[i] + "T00:00:00");
-    const diff = Math.floor(
-      (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    if (diff === 1) {
+  for (let i = 1; i < sortedWeeks.length; i++) {
+    const prevMonday = sortedWeeks[i - 1];
+    const expectedNext = addDays(prevMonday, 7);
+    if (sortedWeeks[i] === expectedNext) {
       streak++;
     } else {
       longest = Math.max(longest, streak);

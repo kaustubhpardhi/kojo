@@ -1,131 +1,26 @@
 @import "tailwindcss";
 
-/* ═══════════════════════════════════════════
-   kōjō — Japanese Aesthetic Theme System
-   Two moods: 日中 (Daytime) & 夜 (Night)
-   ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   Calm Brutalism — typography-led, grid-strict, single accent
+   ═══════════════════════════════════════════════════════════════ */
 
-/* ─── Light Mode: 日中 / Washi & Ink ──────── */
-:root,
-[data-theme="light"] {
-  --bg-primary: #faf7f0;
-  --bg-secondary: #f0ede4;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f7f5ee;
-  --bg-elevated: #fff8ef;
-  --bg-overlay: rgba(250, 247, 240, 0.95);
+:root {
+  --bg: #0A0A0A;
+  --text: #F2F2F0;
+  --muted: #3A3A3A;
+  --accent: #C8FF00;
 
-  --text-primary: #1a1a1a;
-  --text-secondary: #5c5c5c;
-  --text-tertiary: #8a8a8a;
-  --text-ghost: #c4c0b8;
-
-  --accent-primary: #c23b22;
-  --accent-secondary: #8b4513;
-  --accent-glow: rgba(194, 59, 34, 0.15);
-  --accent-gold: #b8860b;
-
-  --border-color: #e5e0d5;
-  --border-subtle: #f0ede4;
-
-  --stamp-color: #c23b22;
-  --stamp-bg: rgba(194, 59, 34, 0.08);
-
-  --streak-color: #e25822;
-  --streak-glow: rgba(226, 88, 34, 0.3);
-
-  --success: #2d8b46;
-  --success-glow: rgba(45, 139, 70, 0.2);
-
-  --priority-border: #c23b22;
-  --priority-bg: rgba(194, 59, 34, 0.04);
-
-  --amrap-color: #8b0000;
-  --amrap-bg: rgba(139, 0, 0, 0.08);
-
-  --level-up-from: #c23b22;
-  --level-up-to: #b8860b;
-
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.1);
-
-  --particle-color: #ffb7c5;
-}
-
-/* ─── Dark Mode: 夜 / Neon Izakaya ─────── */
-[data-theme="dark"] {
-  --bg-primary: #0a0a1a;
-  --bg-secondary: #111128;
-  --bg-card: #161633;
-  --bg-card-hover: #1c1c42;
-  --bg-elevated: #1a1a3e;
-  --bg-overlay: rgba(10, 10, 26, 0.95);
-
-  --text-primary: #e8e6f0;
-  --text-secondary: #9896a8;
-  --text-tertiary: #6b6980;
-  --text-ghost: #3d3b50;
-
-  --accent-primary: #ff6b9d;
-  --accent-secondary: #00e5ff;
-  --accent-glow: rgba(255, 107, 157, 0.25);
-  --accent-gold: #ffd700;
-
-  --border-color: #2a2a4a;
-  --border-subtle: #1e1e3a;
-
-  --stamp-color: #ff6b9d;
-  --stamp-bg: rgba(255, 107, 157, 0.1);
-
-  --streak-color: #ff9500;
-  --streak-glow: rgba(255, 149, 0, 0.4);
-
-  --success: #00e676;
-  --success-glow: rgba(0, 230, 118, 0.25);
-
-  --priority-border: #ff6b9d;
-  --priority-bg: rgba(255, 107, 157, 0.06);
-
-  --amrap-color: #ff4444;
-  --amrap-bg: rgba(255, 68, 68, 0.12);
-
-  --level-up-from: #ff6b9d;
-  --level-up-to: #ffd700;
-
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
-
-  --particle-color: #ff6b9d;
+  --space: 16px;
+  --border: 1px solid #3A3A3A;
 }
 
 @theme inline {
-  --color-background: var(--bg-primary);
-  --color-foreground: var(--text-primary);
-  --color-card: var(--bg-card);
-  --color-card-hover: var(--bg-card-hover);
-  --color-elevated: var(--bg-elevated);
-  --color-accent: var(--accent-primary);
-  --color-accent2: var(--accent-secondary);
-  --color-accent-gold: var(--accent-gold);
-  --color-muted: var(--text-secondary);
-  --color-ghost: var(--text-ghost);
-  --color-border: var(--border-color);
-  --color-border-subtle: var(--border-subtle);
-  --color-stamp: var(--stamp-color);
-  --color-streak: var(--streak-color);
-  --color-success: var(--success);
-  --color-priority-border: var(--priority-border);
-  --color-priority-bg: var(--priority-bg);
-  --color-amrap: var(--amrap-color);
-  --color-amrap-bg: var(--amrap-bg);
-
-  --font-sans: "Inter", "Noto Sans JP", sans-serif;
-  --font-jp: "Noto Sans JP", sans-serif;
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
 }
 
-/* ─── Base Styles ─────────────────────────── */
 * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -137,80 +32,15 @@ html {
 }
 
 body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: "Inter", "Noto Sans JP", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
   min-height: 100dvh;
   overflow-x: hidden;
-  transition:
-    background-color 0.4s ease,
-    color 0.4s ease;
 }
 
-/* ─── Washi texture overlay (light mode) ──── */
-[data-theme="light"] body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image:
-    radial-gradient(
-      ellipse at 20% 50%,
-      rgba(194, 59, 34, 0.02) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 80% 20%,
-      rgba(184, 134, 11, 0.02) 0%,
-      transparent 50%
-    );
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Subtle paper grain texture */
-[data-theme="light"] body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ─── Neon glow overlay (dark mode) ───────── */
-[data-theme="dark"] body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(
-      ellipse at 30% 0%,
-      rgba(255, 107, 157, 0.06) 0%,
-      transparent 60%
-    ),
-    radial-gradient(
-      ellipse at 70% 100%,
-      rgba(0, 229, 255, 0.04) 0%,
-      transparent 60%
-    );
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ─── Scrollbar ───────────────────────────── */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 2px;
-}
-
-/* ─── Input Styles ────────────────────────── */
+/* No rounded corners, no shadows, no gradients — borders only */
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
@@ -222,153 +52,42 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 input:focus {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: -2px;
+  outline: 1px solid var(--accent);
+  outline-offset: 0;
 }
 
-/* ─── Kanji Watermark (dark mode) ─────────── */
-[data-theme="dark"] .kanji-watermark::after {
-  content: "鍛";
-  position: absolute;
-  font-family: "Noto Sans JP", serif;
-  font-size: 20rem;
-  font-weight: 900;
-  color: rgba(255, 107, 157, 0.03);
-  pointer-events: none;
-  right: -2rem;
-  bottom: -3rem;
-  line-height: 1;
-  z-index: 0;
+/* Tap: 100ms opacity flash only */
+.tap-flash:active {
+  opacity: 0.7;
+  transition: opacity 100ms ease;
 }
 
-/* ─── Stamp animation ────────────────────── */
-@keyframes stamp {
-  0% {
-    transform: scale(2) rotate(-15deg);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(0.9) rotate(3deg);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
-  }
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
 }
 
-@keyframes glow-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 8px var(--accent-glow);
-  }
-  50% {
-    box-shadow: 0 0 20px var(--accent-glow);
-  }
+.font-display {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
 }
 
-@keyframes flame-flicker {
-  0%,
-  100% {
-    transform: scaleY(1) scaleX(1);
-  }
-  25% {
-    transform: scaleY(1.1) scaleX(0.95);
-  }
-  50% {
-    transform: scaleY(0.95) scaleX(1.05);
-  }
-  75% {
-    transform: scaleY(1.05) scaleX(0.98);
-  }
+/* Progress loading: repeating horizontal rules, pulse opacity */
+.progress-loading-stripes {
+  background: repeating-linear-gradient(
+    180deg,
+    transparent,
+    transparent 9px,
+    #1A1A1A 9px,
+    #1A1A1A 10px
+  );
+  animation: progress-stripes-pulse 1.2s ease-in-out infinite;
 }
-
-@keyframes float-up {
-  0% {
-    transform: translateY(0) rotate(0deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100vh) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-@keyframes neon-flicker {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  92% {
-    opacity: 1;
-  }
-  93% {
-    opacity: 0.8;
-  }
-  94% {
-    opacity: 1;
-  }
-  96% {
-    opacity: 0.9;
-  }
-  97% {
-    opacity: 1;
-  }
-}
-
-@keyframes ink-spread {
-  0% {
-    transform: scale(0);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0;
-  }
-}
-
-.animate-stamp {
-  animation: stamp 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-}
-
-.animate-glow-pulse {
-  animation: glow-pulse 2s ease-in-out infinite;
-}
-
-.animate-flame {
-  animation: flame-flicker 0.5s ease-in-out infinite;
-}
-
-.animate-neon {
-  animation: neon-flicker 4s ease-in-out infinite;
-}
-
-/* ─── Glass morphism utility ──────────────── */
-.glass {
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
-}
-
-/* ─── Neon text glow (dark mode) ──────────── */
-[data-theme="dark"] .neon-text {
-  text-shadow:
-    0 0 7px var(--accent-primary),
-    0 0 10px var(--accent-primary),
-    0 0 21px var(--accent-primary);
-}
-
-[data-theme="dark"] .neon-text-cyan {
-  text-shadow:
-    0 0 7px var(--accent-secondary),
-    0 0 10px var(--accent-secondary),
-    0 0 21px var(--accent-secondary);
-}
-
-/* ─── Ink brush stroke underline (light mode) */
-[data-theme="light"] .ink-underline {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10'%3E%3Cpath d='M0,8 Q25,2 50,6 T100,4' fill='none' stroke='%23C23B22' stroke-width='2' stroke-linecap='round' opacity='0.4'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: bottom;
-  background-size: 100% 8px;
-  padding-bottom: 6px;
+@keyframes progress-stripes-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
 }
