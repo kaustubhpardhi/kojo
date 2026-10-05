@@ -13,8 +13,12 @@ import { Sheet } from "./ui/Sheet";
 import { Stepper } from "./ui/Stepper";
 import { useToast } from "./ui/Toast";
 import { TemplateCard } from "./TemplateCard";
+import { Avatar } from "./ui/Avatar";
+import { Field } from "./ui/Field";
 import { useAsync } from "@/hooks/useAsync";
 import { signOut } from "@/lib/auth";
+import { APP_NAME } from "@/lib/brand";
+import { displayName, updateDisplayName } from "@/lib/profile";
 import { DEFAULT_GOAL, readGoal, writeGoal } from "@/lib/goal";
 import { PALETTES, type ThemeMode } from "@/lib/prefs";
 import { buildExportData } from "@/lib/progress-queries";
@@ -31,8 +35,11 @@ export function ProfileContent() {
 
   const [goal, setGoal] = useState(readGoal);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [nameOpen, setNameOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const { data: pending, reload: reloadPending } = useAsync(pendingCount, []);
+
+  const name = displayName(user);
 
   const updateGoal = (next: number | "") => {
     const value = next === "" ? DEFAULT_GOAL : Math.max(1, Math.min(14, next));
@@ -48,7 +55,7 @@ export function ProfileContent() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `kojo-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `reps-export-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       toast({ message: "Export downloaded", icon: "download", tone: "success" });
@@ -61,7 +68,20 @@ export function ProfileContent() {
 
   return (
     <div className="px-4 pt-safe">
-      <PageHeader title="Profile" subtitle={user!.email ?? undefined} />
+      <PageHeader title="Profile" />
+
+      <Card className="mb-6 flex items-center gap-4">
+        <Avatar name={name} size={60} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[20px] font-extrabold tracking-[-0.01em]">
+            {name}
+          </p>
+          <p className="truncate text-[13px] text-fg-muted">{user!.email}</p>
+        </div>
+        <Button size="sm" variant="soft" icon="edit" onClick={() => setNameOpen(true)}>
+          Edit
+        </Button>
+      </Card>
 
       {/* Appearance */}
       <section>
@@ -165,7 +185,7 @@ export function ProfileContent() {
       </section>
 
       <div className="mt-8 flex items-center justify-center gap-2 pb-2 text-[12.5px] text-fg-subtle">
-        <span>kōjō · 工場</span>
+        <span>{APP_NAME} · built by {name.split(" ")[0]}</span>
         <span aria-hidden>·</span>
         <button type="button" onClick={() => router.push("/design")} className="underline">
           design system
@@ -177,7 +197,59 @@ export function ProfileContent() {
         onClose={() => setArchiveOpen(false)}
         userId={userId}
       />
+      <NameSheet open={nameOpen} onClose={() => setNameOpen(false)} current={name} />
     </div>
+  );
+}
+
+function NameSheet({
+  open,
+  onClose,
+  current,
+}: {
+  open: boolean;
+  onClose: () => void;
+  current: string;
+}) {
+  const { toast } = useToast();
+  const [value, setValue] = useState(current);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    const next = value.trim();
+    if (!next) return;
+    setSaving(true);
+    try {
+      await updateDisplayName(next);
+      toast({ message: `Nice to meet you, ${next.split(" ")[0]}`, icon: "check", tone: "success" });
+      onClose();
+    } catch {
+      toast({ message: "Couldn't save that name", icon: "x", tone: "danger" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Sheet open={open} onClose={onClose} title="What should we call you?">
+      <div className="space-y-4 pb-4">
+        <div className="flex justify-center pt-1">
+          <Avatar name={value || current} size={72} />
+        </div>
+        <Field
+          label="Your name"
+          value={value}
+          placeholder="Kaustubh P"
+          autoFocus
+          maxLength={40}
+          onChange={(e) => setValue(e.target.value)}
+          hint="Used in greetings, on your avatar, and on shared workout cards."
+        />
+        <Button block size="lg" loading={saving} disabled={!value.trim()} onClick={() => void save()}>
+          Save
+        </Button>
+      </div>
+    </Sheet>
   );
 }
 

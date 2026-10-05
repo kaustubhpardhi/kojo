@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { usePrefs } from "./PreferencesProvider";
+import { Avatar } from "./ui/Avatar";
 import { Button, IconButton } from "./ui/Button";
 import { Burst } from "./ui/Burst";
 import { Card } from "./ui/Card";
@@ -16,6 +17,7 @@ import { Sheet } from "./ui/Sheet";
 import { Skeleton } from "./ui/Skeleton";
 import { Stepper } from "./ui/Stepper";
 import { useToast } from "./ui/Toast";
+import { APP_NAME } from "@/lib/brand";
 import { PALETTES, type Palette, type ThemeMode } from "@/lib/prefs";
 
 const SWATCHES = [
@@ -50,7 +52,7 @@ export function DesignSystem() {
           <h1 className="font-display text-[26px] font-extrabold tracking-[-0.02em]">
             Design system
           </h1>
-          <p className="text-[13.5px] text-fg-muted">kōjō · tokens and components</p>
+          <p className="text-[13.5px] text-fg-muted">{APP_NAME} · tokens and components</p>
         </div>
       </header>
 
@@ -191,6 +193,19 @@ export function DesignSystem() {
         </div>
       </Section>
 
+      <Section title="Avatar">
+        <div className="flex items-center gap-4">
+          <Avatar name="Kaustubh P" size={60} />
+          <Avatar name="Kaustubh P" size={44} />
+          <Avatar name="Kaustubh P" size={36} />
+          <Avatar name="Reps" size={36} />
+        </div>
+        <p className="mt-2 text-[13px] text-fg-muted">
+          Initials from your display name — two words give first and last, one
+          word gives its first two letters.
+        </p>
+      </Section>
+
       <Section title="Mascot">
         <div className="flex items-end gap-5">
           <Mascot size={80} />
@@ -198,9 +213,8 @@ export function DesignSystem() {
           <Mark size={48} animated />
         </div>
         <p className="mt-2 text-[13px] text-fg-muted">
-          The mark is 工 from 工場 (kōjō, &ldquo;workshop&rdquo;) read as a loaded barbell:
-          two plates and a bar. The mascot adds eyes for empty states and the
-          session-complete screen.
+          The mark is a loaded barbell seen end-on: two plates and a bar. The
+          mascot adds eyes for empty states and the session-complete screen.
         </p>
       </Section>
 

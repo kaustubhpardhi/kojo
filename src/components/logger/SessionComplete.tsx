@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "../AuthProvider";
+import { APP_NAME } from "@/lib/brand";
+import { displayName } from "@/lib/profile";
 import { formatDate } from "@/lib/dates";
 import { haptic } from "@/lib/haptics";
 import { spring } from "@/lib/motion";
@@ -36,6 +39,7 @@ export function SessionComplete({
   onDone,
 }: SessionCompleteProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [sharing, setSharing] = useState(false);
   const { data: streaks } = useAsync(() => getStreaks(userId), [userId]);
 
@@ -56,16 +60,17 @@ export function SessionComplete({
         ],
         streak: streaks?.current ?? 0,
         prCount,
+        athlete: displayName(user),
       });
 
-      const file = new File([blob], "kojo-workout.png", { type: "image/png" });
+      const file = new File([blob], "workout.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `${title} — kōjō` });
+        await navigator.share({ files: [file], title: `${title} — ${APP_NAME}` });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "kojo-workout.png";
+        a.download = "workout.png";
         a.click();
         URL.revokeObjectURL(url);
         toast({ message: "Saved the card to your downloads", icon: "download" });

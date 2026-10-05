@@ -1,9 +1,12 @@
+import { APP_NAME } from "./brand";
+
 interface ShareCardInput {
   title: string;
   date: string;
   stats: { label: string; value: string }[];
   streak: number;
   prCount: number;
+  athlete?: string;
 }
 
 /**
@@ -112,7 +115,7 @@ export async function buildShareCard(input: ShareCardInput): Promise<Blob> {
 
   ctx.fillStyle = muted;
   ctx.font = "700 34px Inter, system-ui, sans-serif";
-  ctx.fillText("kōjō", W / 2, H - 90);
+  ctx.fillText(input.athlete ? `${input.athlete} · ${APP_NAME}` : APP_NAME, W / 2, H - 90);
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {

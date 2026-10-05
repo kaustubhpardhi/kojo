@@ -1,7 +1,7 @@
 {
-  "name": "kōjō — workout log",
-  "short_name": "kōjō",
-  "description": "Build your own workouts, log them fast, watch the numbers climb.",
+  "name": "Reps — workout log",
+  "short_name": "Reps",
+  "description": "Your training log. Built for one person.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

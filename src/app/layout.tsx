@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { PreferencesProvider } from "@/components/PreferencesProvider";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { ToastProvider } from "@/components/ui/Toast";
+import { APP_DESCRIPTION, APP_NAME } from "@/lib/brand";
 import { PREFS_INIT_SCRIPT, THEME_BG } from "@/lib/prefs";
 
 const display = Bricolage_Grotesque({
@@ -21,11 +22,11 @@ const sans = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "kōjō — workout log",
-  description: "Build your own workouts, log them fast, watch the numbers climb.",
+  title: `${APP_NAME} — workout log`,
+  description: APP_DESCRIPTION,
   manifest: "/manifest.webmanifest",
-  applicationName: "kōjō",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "kōjō" },
+  applicationName: APP_NAME,
+  appleWebApp: { capable: true, statusBarStyle: "default", title: APP_NAME },
   icons: {
     icon: [
       { url: "/icons/icon.svg", type: "image/svg+xml" },

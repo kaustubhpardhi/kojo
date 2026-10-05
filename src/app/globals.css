@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════════
-   kōjō design tokens
+   Reps — design tokens
    Theme:   html[data-theme="light" | "dark"]
    Palette: html[data-palette="sunrise" | "matcha" | "grape"]
    Accent text must use --accent-fg (AA on bg/surface); fills use --accent

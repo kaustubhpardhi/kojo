@@ -7,6 +7,7 @@ import { Calendar } from "@/components/Calendar";
 import { TemplateCard } from "@/components/TemplateCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { Mark } from "@/components/ui/Mark";
 import { Ring } from "@/components/ui/Ring";
@@ -14,7 +15,9 @@ import { Skeleton, SkeletonList } from "@/components/ui/Skeleton";
 import { useAsync } from "@/hooks/useAsync";
 import { useStartWorkout } from "@/hooks/useStartWorkout";
 import { usePrefs } from "@/components/PreferencesProvider";
+import { APP_NAME } from "@/lib/brand";
 import { friendlyDate, relativeDays, todayStr } from "@/lib/dates";
+import { displayName, firstName } from "@/lib/profile";
 import { getActiveSession, getHomeStats, getRecentSessions, getTemplates } from "@/lib/queries";
 import { readGoal } from "@/lib/goal";
 
@@ -41,7 +44,7 @@ export function HomeContent() {
   );
   const { data: recent } = useAsync(() => getRecentSessions(userId, 3), [userId]);
 
-  const firstName = (user!.email ?? "").split("@")[0];
+  const name = displayName(user);
   const weekRatio = stats ? Math.min(1, stats.week.completed / Math.max(1, stats.week.goal)) : 0;
 
   return (
@@ -49,14 +52,26 @@ export function HomeContent() {
       <header className="flex items-center justify-between gap-3 pt-3 pb-5">
         <div className="flex items-center gap-2.5">
           <Mark size={34} />
-          <span className="font-display text-[22px] font-extrabold tracking-[-0.02em]">kōjō</span>
+          <span className="font-display text-[22px] font-extrabold tracking-[-0.02em]">
+            {APP_NAME}
+          </span>
         </div>
-        <p className="text-[13px] text-fg-muted">{friendlyDate(todayStr())}</p>
+        <div className="flex items-center gap-3">
+          <p className="text-[13px] text-fg-muted">{friendlyDate(todayStr())}</p>
+          <button
+            type="button"
+            onClick={() => router.push("/profile")}
+            aria-label="Your profile"
+            className="rounded-full active:opacity-70"
+          >
+            <Avatar name={name} size={36} />
+          </button>
+        </div>
       </header>
 
       <div>
         <h1 className="font-display text-[30px] font-extrabold leading-tight tracking-[-0.02em]">
-          {greeting()}, {firstName}.
+          {greeting()}, {firstName(user)}.
         </h1>
         <p className="mt-1 text-[15px] text-fg-muted">
           {stats

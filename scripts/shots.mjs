@@ -20,12 +20,8 @@ const OUT = join(tmpdir(), "kojo-shots");
 const SHOTS = [
   { name: "login-dark", path: "/login", theme: "dark", palette: "sunrise" },
   { name: "login-light", path: "/login", theme: "light", palette: "sunrise" },
-  { name: "design-matcha", path: "/design", theme: "dark", palette: "matcha" },
-  { name: "design-grape-light", path: "/design", theme: "light", palette: "grape" },
-  { name: "design-buttons", path: "/design", theme: "dark", palette: "sunrise", scroll: 1180 },
-  { name: "design-controls", path: "/design", theme: "dark", palette: "sunrise", scroll: 1900 },
-  { name: "design-mascot", path: "/design", theme: "dark", palette: "sunrise", scroll: 2620 },
-  { name: "design-states", path: "/design", theme: "dark", palette: "sunrise", scroll: 3340 },
+  { name: "reset-dark", path: "/reset-password", theme: "dark", palette: "sunrise" },
+  { name: "design-avatar", path: "/design", theme: "dark", palette: "sunrise", scroll: 2500 },
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

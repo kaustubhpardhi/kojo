@@ -4,6 +4,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
+import { Icon } from "@/components/ui/Icon";
+import { Mark } from "@/components/ui/Mark";
 import { updatePassword } from "@/lib/auth";
 
 export default function ResetPasswordPage() {
@@ -16,7 +20,7 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError("That needs to be at least 6 characters.");
       return;
     }
     setLoading(true);
@@ -26,7 +30,7 @@ export default function ResetPasswordPage() {
       router.push("/");
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to set password");
+      setError(err instanceof Error ? err.message : "Couldn't set that password.");
     } finally {
       setLoading(false);
     }
@@ -35,55 +39,60 @@ export default function ResetPasswordPage() {
   if (authLoading) return <LoadingScreen />;
 
   return (
-    <div className="min-h-dvh bg-[#0A0A0A] text-[#F2F2F0] flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="font-display text-5xl font-bold text-[#C8FF00] tracking-tight mb-10">
-          KOJO
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 pb-safe pt-safe">
+      <div>
+        <Mark size={56} />
+        <h1 className="mt-6 font-display text-[34px] font-extrabold leading-tight tracking-[-0.02em]">
+          {user ? "Set a new password" : "This link expired"}
         </h1>
-        {user ? (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <p className="text-xs text-[#6A6A6A] tracking-wide">
-              Set a new password for {user.email}
-            </p>
-            <input
-              type="password"
-              value={password}
-              required
-              minLength={6}
-              autoComplete="new-password"
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="NEW PASSWORD (MIN 6)"
-              className="w-full py-4 px-0 text-[#F2F2F0] text-lg font-bold tracking-wide bg-transparent border-0 border-b border-[#3A3A3A] focus:outline-none focus:border-[#C8FF00] placeholder:text-[#3A3A3A] placeholder:font-normal"
-            />
-            <button
-              type="submit"
-              disabled={loading || password.length < 6}
-              className="tap-flash w-full mt-2 py-4 bg-[#0A0A0A] border border-[#3A3A3A] text-[#C8FF00] font-bold text-sm uppercase tracking-widest disabled:opacity-40"
-            >
-              {loading ? "Saving…" : "Save password"}
-            </button>
-            {error && (
-              <p className="text-xs text-[#3A3A3A] uppercase tracking-wider">
-                {error}
-              </p>
-            )}
-          </form>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <p className="text-xs text-[#6A6A6A] tracking-wide">
-              This reset link is invalid or has expired. Request a new one from
-              the login page.
-            </p>
-            <button
-              type="button"
-              onClick={() => router.push("/login")}
-              className="tap-flash w-full py-4 bg-[#0A0A0A] border border-[#3A3A3A] text-[#C8FF00] font-bold text-sm uppercase tracking-widest"
-            >
-              Back to log in
-            </button>
-          </div>
-        )}
+        <p className="mt-1.5 text-[15px] text-fg-muted">
+          {user
+            ? `You're signed in as ${user.email}.`
+            : "Reset links are single-use and time limited. Request a fresh one."}
+        </p>
       </div>
-    </div>
+
+      {user ? (
+        <form onSubmit={handleSubmit} className="mt-8 space-y-3">
+          <Field
+            type="password"
+            label="New password"
+            value={password}
+            required
+            minLength={6}
+            autoFocus
+            autoComplete="new-password"
+            placeholder="At least 6 characters"
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {error && (
+            <p role="alert" className="flex items-start gap-2 text-[13.5px] text-danger">
+              <Icon name="x" size={16} className="mt-0.5 shrink-0" />
+              {error}
+            </p>
+          )}
+          <Button
+            type="submit"
+            block
+            size="xl"
+            loading={loading}
+            disabled={password.length < 6}
+            className="mt-2"
+          >
+            Save password
+          </Button>
+        </form>
+      ) : (
+        <Button
+          block
+          size="xl"
+          variant="secondary"
+          className="mt-8"
+          onClick={() => router.push("/login")}
+        >
+          Back to log in
+        </Button>
+      )}
+    </main>
   );
 }

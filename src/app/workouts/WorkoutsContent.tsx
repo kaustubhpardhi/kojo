@@ -105,7 +105,7 @@ export function WorkoutsContent() {
         <EmptyState
           icon="dumbbell"
           title="Let's build your first workout"
-          body="Name it, add exercises, set your targets. Or start from the classic kōjō split."
+          body="Name it, add exercises, set your targets. Or start from your old A/B/C split."
           action={
             <div className="flex flex-col gap-2.5">
               <Button size="lg" icon="plus" onClick={() => router.push("/workouts/new")}>
@@ -260,7 +260,7 @@ function StarterSheet({
       open={open}
       onClose={onClose}
       title="Starter templates"
-      subtitle="The original kōjō split. Import and edit freely."
+      subtitle="Your original A/B/C split. Import and edit freely."
     >
       <div className="space-y-2.5 pb-4">
         {loading && <SkeletonList rows={3} />}

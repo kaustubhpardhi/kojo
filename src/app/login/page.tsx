@@ -9,6 +9,7 @@ import { Field } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Mark } from "@/components/ui/Mark";
 import { sendPasswordResetEmail, signInWithPassword, signUp } from "@/lib/auth";
+import { APP_NAME } from "@/lib/brand";
 
 type Mode = "login" | "signup" | "reset";
 
@@ -93,7 +94,12 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-5 pb-safe pt-safe">
       {/* No entry fade here: this must be readable before JS hydrates. */}
       <div>
-        <Mark size={56} animated />
+        <div className="flex items-center gap-2.5">
+          <Mark size={52} animated />
+          <span className="font-display text-[28px] font-extrabold tracking-[-0.02em]">
+            {APP_NAME}
+          </span>
+        </div>
         <h1 className="mt-6 font-display text-[34px] font-extrabold leading-tight tracking-[-0.02em]">
           {copy.title}
         </h1>

@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 import { spring } from "@/lib/motion";
 
 /**
- * kōjō mark — "工" (the kanji in 工場, factory/workshop) drawn as a bench press:
- * two plates on a bar. Doubles as the app icon and the mascot's face frame.
+ * App mark — a loaded barbell seen end-on: two plates and a bar.
+ * Doubles as the app icon and the mascot's face frame.
  */
 export function Mark({ size = 40, animated }: { size?: number; animated?: boolean }) {
   const Wrap = animated ? motion.g : "g";

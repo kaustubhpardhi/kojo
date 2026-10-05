@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { APP_NAME } from "@/lib/brand";
 import { spring } from "@/lib/motion";
 import { Button, IconButton } from "./ui/Button";
 import { Mark } from "./ui/Mark";
@@ -65,7 +66,9 @@ export function InstallPrompt() {
           <div className="flex items-center gap-3">
             <Mark size={44} />
             <div className="min-w-0 flex-1">
-              <p className="font-display text-base font-bold">Keep kōjō on your home screen</p>
+              <p className="font-display text-base font-bold">
+                Keep {APP_NAME} on your home screen
+              </p>
               <p className="text-[13px] text-fg-muted">Opens instantly, works offline.</p>
             </div>
             <IconButton icon="x" label="Not now" variant="ghost" onClick={dismiss} />

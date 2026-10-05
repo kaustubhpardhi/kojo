@@ -1,4 +1,5 @@
 import { Mark } from "./ui/Mark";
+import { APP_NAME } from "@/lib/brand";
 
 export function LoadingScreen() {
   return (
@@ -9,7 +10,7 @@ export function LoadingScreen() {
     >
       <Mark size={56} animated />
       <span className="font-display text-sm font-semibold tracking-wide text-fg-subtle">
-        kōjō
+        {APP_NAME}
       </span>
     </div>
   );
