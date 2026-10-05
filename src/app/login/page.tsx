@@ -2,15 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { setPasswordForEmail } from "@/app/actions/auth";
-import { signInWithPassword, signUp } from "@/lib/auth";
+import { sendPasswordResetEmail, signInWithPassword, signUp } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [mode, setMode] = useState<"login" | "signup" | "set-password">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
+  const [accountExists, setAccountExists] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -49,7 +49,9 @@ export default function LoginPage() {
         msg.toLowerCase().includes("already registered") ||
         msg.toLowerCase().includes("user already exists")
       ) {
-        setMode("set-password");
+        setAccountExists(true);
+        setResetSent(false);
+        setMode("reset");
         setError("");
       } else {
         setError(msg);
@@ -59,30 +61,16 @@ export default function LoginPage() {
     }
   };
 
-  const handleSetPassword = async (e: React.FormEvent) => {
+  const handleSendReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !newPassword) return;
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
+    if (!email) return;
     setLoading(true);
     setError("");
     try {
-      const result = await setPasswordForEmail(email.trim(), newPassword);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      setMode("login");
-      setPassword(newPassword);
-      setNewPassword("");
-      setError("");
-      await signInWithPassword(email.trim(), newPassword);
-      router.push("/");
-      router.refresh();
+      await sendPasswordResetEmail(email.trim());
+      setResetSent(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to set password");
+      setError(err instanceof Error ? err.message : "Failed to send reset link");
     } finally {
       setLoading(false);
     }
@@ -98,37 +86,34 @@ export default function LoginPage() {
           KOJO
         </h1>
 
-        {mode === "set-password" ? (
+        {mode === "reset" ? (
           <div className="border border-[#3A3A3A] p-6">
             <h2 className="text-lg font-bold text-[#F2F2F0] mb-2">
-              Account exists
+              {accountExists ? "Account exists" : "Reset password"}
             </h2>
             <p className="text-xs text-[#3A3A3A] tracking-wide mb-4">
-              This email already has an account. Set a new password (no email
-              sent).
+              {resetSent
+                ? "Check your inbox for a link to set a new password."
+                : "We'll email you a link to set a new password."}
             </p>
-            <form onSubmit={handleSetPassword}>
+            <form onSubmit={handleSendReset}>
               <input
                 type="email"
                 value={email}
-                readOnly
-                className="w-full py-3 px-0 text-[#6A6A6A] text-sm bg-transparent border-0 border-b border-[#3A3A3A] mb-4"
-              />
-              <input
-                type="password"
-                value={newPassword}
                 required
-                minLength={6}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="New password (min 6)"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setResetSent(false);
+                }}
+                placeholder="YOUR@EMAIL.COM"
                 className="w-full py-4 px-0 text-[#F2F2F0] text-lg font-bold tracking-wide bg-transparent border-0 border-b border-[#3A3A3A] focus:outline-none focus:border-[#C8FF00] placeholder:text-[#3A3A3A] placeholder:font-normal"
               />
               <button
                 type="submit"
-                disabled={loading || newPassword.length < 6}
+                disabled={loading || !email || resetSent}
                 className="tap-flash w-full mt-6 py-4 bg-[#0A0A0A] border border-[#3A3A3A] text-[#C8FF00] font-bold text-sm uppercase tracking-widest disabled:opacity-40"
               >
-                {loading ? "Setting…" : "Set password & log in"}
+                {loading ? "Sending…" : resetSent ? "Link sent" : "Send reset link"}
               </button>
             </form>
             {error && (
@@ -140,7 +125,8 @@ export default function LoginPage() {
               type="button"
               onClick={() => {
                 setMode("login");
-                setNewPassword("");
+                setAccountExists(false);
+                setResetSent(false);
                 setError("");
               }}
               className="mt-4 text-xs font-bold uppercase tracking-widest text-[#C8FF00] border-b border-[#C8FF00]"
@@ -197,6 +183,20 @@ export default function LoginPage() {
               <p className="text-xs text-[#3A3A3A] uppercase tracking-wider">
                 {error}
               </p>
+            )}
+            {mode === "login" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("reset");
+                  setAccountExists(false);
+                  setResetSent(false);
+                  setError("");
+                }}
+                className="self-start text-xs font-bold uppercase tracking-widest text-[#6A6A6A]"
+              >
+                Forgot password?
+              </button>
             )}
           </form>
         )}
