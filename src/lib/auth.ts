@@ -58,6 +58,24 @@ export async function updatePassword(password: string) {
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
+  await dropCachedPages();
+}
+
+/**
+ * The service worker caches rendered pages so the app opens without signal.
+ * Those belong to whoever was signed in, so drop them on the way out. Matched
+ * by suffix to stay decoupled from the cache version in public/sw.js.
+ */
+async function dropCachedPages() {
+  if (typeof caches === "undefined") return;
+  try {
+    const names = await caches.keys();
+    await Promise.all(
+      names.filter((name) => name.endsWith("-pages")).map((name) => caches.delete(name)),
+    );
+  } catch {
+    // Cache eviction is best-effort; never block signing out.
+  }
 }
 
 export async function getUser() {
