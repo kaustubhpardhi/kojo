@@ -1,32 +1,37 @@
 import type { Metadata, Viewport } from "next";
-import { Bebas_Neue, Space_Grotesk } from "next/font/google";
+import { Bricolage_Grotesque, Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/components/AuthProvider";
+import { PreferencesProvider } from "@/components/PreferencesProvider";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { ToastProvider } from "@/components/ui/Toast";
+import { PREFS_INIT_SCRIPT, THEME_BG } from "@/lib/prefs";
 
-const bebasNeue = Bebas_Neue({
+const display = Bricolage_Grotesque({
   subsets: ["latin"],
-  variable: "--font-display",
-  weight: "400",
+  variable: "--font-bricolage",
+  weight: ["600", "700", "800"],
   display: "swap",
 });
 
-const spaceGrotesk = Space_Grotesk({
+const sans = Inter({
   subsets: ["latin"],
-  variable: "--font-sans",
-  weight: ["400", "700"],
+  variable: "--font-inter",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Kojo — Workout Log",
-  description: "Track workouts, sets, and progress",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Kojo",
+  title: "kōjō — workout log",
+  description: "Build your own workouts, log them fast, watch the numbers climb.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "kōjō",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "kōjō" },
+  icons: {
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
 };
 
@@ -35,26 +40,29 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0A0A0A",
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: THEME_BG.dark },
+    { media: "(prefers-color-scheme: light)", color: THEME_BG.light },
+  ],
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="dark" data-palette="sunrise" suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+        {/* Applies the saved theme before first paint to avoid a flash. */}
+        <script dangerouslySetInnerHTML={{ __html: PREFS_INIT_SCRIPT }} />
       </head>
-      <body className={`${bebasNeue.variable} ${spaceGrotesk.variable} font-sans antialiased`}>
-        <ThemeProvider>
+      <body className={`${display.variable} ${sans.variable} antialiased`}>
+        <PreferencesProvider>
           <AuthProvider>
-            <ServiceWorkerRegistration />
-            <main className="relative z-10 min-h-dvh">{children}</main>
+            <ToastProvider>
+              <ServiceWorkerRegistration />
+              {children}
+            </ToastProvider>
           </AuthProvider>
-        </ThemeProvider>
+        </PreferencesProvider>
       </body>
     </html>
   );

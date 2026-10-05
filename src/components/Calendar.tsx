@@ -1,162 +1,155 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Session, DayType } from "@/lib/database.types";
-
-const SWIPE_THRESHOLD = 50;
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { cn } from "@/lib/cn";
+import { isoDayOfWeek, parseDate, todayStr } from "@/lib/dates";
+import { haptic } from "@/lib/haptics";
+import { getSessionsForMonth } from "@/lib/queries";
+import { useAsync } from "@/hooks/useAsync";
+import type { Session } from "@/lib/database.types";
+import { IconButton } from "./ui/Button";
+import { Skeleton } from "./ui/Skeleton";
 
 interface CalendarProps {
+  userId: string;
   year: number;
   month: number;
-  sessions: Session[];
-  onPrevMonth: () => void;
-  onNextMonth: () => void;
-  onDayClick: (date: string, session?: Session) => void;
+  onMonthChange: (year: number, month: number) => void;
+  onSelectSession: (session: Session) => void;
 }
 
-const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
-const DAY_STAMPS: Record<DayType, string> = { A: "A", B: "B", C: "C" };
-
-function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month, 0).getDate();
-}
-function getFirstDayOfMonth(year: number, month: number) {
-  return new Date(year, month - 1, 1).getDay();
-}
-function formatDate(year: number, month: number, day: number) {
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-function isToday(year: number, month: number, day: number) {
-  const now = new Date();
-  return now.getFullYear() === year && now.getMonth() + 1 === month && now.getDate() === day;
-}
-function isPast(year: number, month: number, day: number) {
-  const date = new Date(year, month - 1, day);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
-}
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
 export function Calendar({
+  userId,
   year,
   month,
-  sessions,
-  onPrevMonth,
-  onNextMonth,
-  onDayClick,
+  onMonthChange,
+  onSelectSession,
 }: CalendarProps) {
-  const [dragX, setDragX] = useState(0);
-  const daysInMonth = getDaysInMonth(year, month);
-  const firstDay = getFirstDayOfMonth(year, month);
-  const sessionMap = new Map(sessions.map((s) => [s.date, s]));
-
-  const days: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) days.push(null);
-  for (let d = 1; d <= daysInMonth; d++) days.push(d);
-
-  const handleDragEnd = useCallback(
-    (_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
-      const { offset, velocity } = info;
-      if (offset.x < -SWIPE_THRESHOLD || velocity.x < -200) onNextMonth();
-      else if (offset.x > SWIPE_THRESHOLD || velocity.x > 200) onPrevMonth();
-      setDragX(0);
-    },
-    [onPrevMonth, onNextMonth],
+  const [direction, setDirection] = useState(1);
+  const { data: sessions, loading } = useAsync(
+    () => getSessionsForMonth(userId, year, month),
+    [userId, year, month],
   );
 
+  const byDate = useMemo(() => {
+    const map = new Map<string, Session[]>();
+    for (const s of sessions ?? []) {
+      const list = map.get(s.date) ?? [];
+      list.push(s);
+      map.set(s.date, list);
+    }
+    return map;
+  }, [sessions]);
+
+  const cells = useMemo(() => {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const firstDate = `${year}-${String(month).padStart(2, "0")}-01`;
+    const lead = isoDayOfWeek(firstDate);
+    const out: (string | null)[] = Array.from({ length: lead }, () => null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      out.push(`${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
+    }
+    return out;
+  }, [year, month]);
+
+  const shift = (delta: number) => {
+    haptic("tap");
+    setDirection(delta);
+    const next = month + delta;
+    if (next < 1) onMonthChange(year - 1, 12);
+    else if (next > 12) onMonthChange(year + 1, 1);
+    else onMonthChange(year, next);
+  };
+
+  const label = parseDate(`${year}-${String(month).padStart(2, "0")}-01`).toLocaleDateString(
+    undefined,
+    { month: "long", year: "numeric" },
+  );
+  const today = todayStr();
+
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-4 px-1">
-        <button
-          type="button"
-          onClick={onPrevMonth}
-          className="tap-flash w-10 h-10 flex items-center justify-center text-[#3A3A3A] font-bold text-xl"
-        >
-          ‹
-        </button>
-        <div className="text-center">
-          <h2 className="text-lg font-bold text-[#F2F2F0] uppercase tracking-wide">
-            {MONTH_NAMES[month - 1]}
-          </h2>
-          <p className="text-[10px] uppercase tracking-widest text-[#3A3A3A] mt-0.5">
-            {year}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onNextMonth}
-          className="tap-flash w-10 h-10 flex items-center justify-center text-[#3A3A3A] font-bold text-xl"
-        >
-          ›
-        </button>
+    <div className="rounded-[var(--radius-lg)] bg-surface p-3 shadow-soft">
+      <div className="flex items-center justify-between px-1 pb-2">
+        <IconButton icon="chevronLeft" label="Previous month" variant="ghost" onClick={() => shift(-1)} />
+        <p className="font-display text-[17px] font-bold">{label}</p>
+        <IconButton icon="chevronRight" label="Next month" variant="ghost" onClick={() => shift(1)} />
       </div>
 
-      <div className="grid grid-cols-7 gap-px mb-2">
-        {DAY_LABELS.map((label, i) => (
-          <div
-            key={i}
-            className="text-center py-2 text-[10px] font-bold uppercase tracking-widest text-[#3A3A3A]"
-          >
-            {label}
-          </div>
+      <div className="grid grid-cols-7 gap-1 pb-1" aria-hidden>
+        {DAY_LABELS.map((d, i) => (
+          <span key={i} className="py-1 text-center text-[11px] font-semibold text-fg-subtle">
+            {d}
+          </span>
         ))}
       </div>
 
-      <div
-        className="grid grid-cols-7 gap-px"
-        style={{ transform: `translateX(${dragX}px)` }}
-      >
-        {days.map((day, idx) => {
-          if (day === null) {
-            return <div key={`empty-${idx}`} className="aspect-square" />;
-          }
-          const dateStr = formatDate(year, month, day);
-          const session = sessionMap.get(dateStr);
-          const today = isToday(year, month, day);
-          const past = isPast(year, month, day);
+      {loading ? (
+        <Skeleton className="h-[232px] w-full" />
+      ) : (
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={`${year}-${month}`}
+            initial={{ opacity: 0, x: direction * 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: direction * -24 }}
+            transition={{ duration: 0.18 }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.12}
+            onDragEnd={(_, info) => {
+              if (info.offset.x < -60) shift(1);
+              else if (info.offset.x > 60) shift(-1);
+            }}
+            className="grid grid-cols-7 gap-1 touch-pan-y"
+          >
+            {cells.map((date, i) => {
+              if (!date) return <span key={`pad-${i}`} />;
 
-          return (
-            <button
-              key={dateStr}
-              type="button"
-              onClick={() => onDayClick(dateStr, session)}
-              className="tap-flash aspect-square flex flex-col items-center justify-center border border-[#3A3A3A] bg-[#0A0A0A]"
-              style={{
-                background: today || session ? "#1A1A1A" : "#0A0A0A",
-                borderColor: session?.completed_at ? "#C8FF00" : "#3A3A3A",
-              }}
-            >
-              <span
-                className="text-sm font-bold tabular-nums"
-                style={{
-                  color: session?.completed_at
-                    ? "#C8FF00"
-                    : today
-                      ? "#F2F2F0"
-                      : past
-                        ? "#3A3A3A"
-                        : "#F2F2F0",
-                }}
-              >
-                {day}
-              </span>
-              {session?.completed_at && (
-                <span className="text-[9px] font-bold text-[#C8FF00] mt-0.5">
-                  {DAY_STAMPS[session.day] ?? "✓"}
-                </span>
-              )}
-              {session && !session.completed_at && (
-                <span className="text-[9px] text-[#3A3A3A] mt-0.5">…</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+              const daySessions = byDate.get(date) ?? [];
+              const completed = daySessions.filter((s) => s.completed_at);
+              const inProgress = daySessions.find((s) => !s.completed_at);
+              const isToday = date === today;
+              const dayNum = Number(date.slice(8, 10));
+
+              return (
+                <button
+                  key={date}
+                  type="button"
+                  disabled={daySessions.length === 0}
+                  onClick={() => {
+                    haptic("tap");
+                    onSelectSession(inProgress ?? completed[0]);
+                  }}
+                  aria-label={`${date}${
+                    completed.length ? `, ${completed.length} completed` : ""
+                  }${inProgress ? ", in progress" : ""}`}
+                  className={cn(
+                    "relative flex aspect-square flex-col items-center justify-center rounded-[12px] text-[14px] font-semibold tabular transition-colors",
+                    completed.length > 0 && "bg-accent text-on-accent",
+                    inProgress && "bg-accent-soft text-accent-fg ring-1 ring-accent",
+                    daySessions.length === 0 && "text-fg-subtle",
+                    isToday && daySessions.length === 0 && "ring-1 ring-line",
+                    daySessions.length > 0 && "active:scale-90",
+                  )}
+                >
+                  {dayNum}
+                  {isToday && (
+                    <span
+                      className={cn(
+                        "absolute bottom-1 h-1 w-1 rounded-full",
+                        completed.length > 0 ? "bg-on-accent" : "bg-accent",
+                      )}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </motion.div>
+        </AnimatePresence>
+      )}
     </div>
   );
 }

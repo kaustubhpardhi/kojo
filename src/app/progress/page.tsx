@@ -1,11 +1,10 @@
-import { Suspense } from "react";
-import { ProgressPage } from "@/components/progress/ProgressPage";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { AppShell } from "@/components/AppShell";
+import { ProgressContent } from "@/components/progress/ProgressContent";
 
-export default function ProgressRoute() {
+export default function ProgressPage() {
   return (
-    <Suspense fallback={<LoadingScreen />}>
-      <ProgressPage />
-    </Suspense>
+    <AppShell>
+      <ProgressContent />
+    </AppShell>
   );
 }

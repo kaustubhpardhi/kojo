@@ -1,9 +1,4 @@
-/**
- * Progress page — TypeScript types for every view's data shape.
- * Used by progress hooks and components.
- */
-
-// ─── Chip / navigation ─────────────────────────────────────────────────────
+import type { MuscleGroup } from "../database.types";
 
 export type ProgressChipId =
   | "strength"
@@ -12,98 +7,74 @@ export type ProgressChipId =
   | "amrap"
   | "personal-bests";
 
-// ─── STRENGTH ──────────────────────────────────────────────────────────────
-
-/** One point on the estimated 1RM over time chart (max Epley per session date). */
 export interface StrengthDataPoint {
-  date: string; // YYYY-MM-DD
-  estimated1RM: number; // kg
-}
-
-export interface StrengthCallout {
-  allTimeBest: number; // kg
-  lastSession: number; // kg
-  trend: {
-    direction: "up" | "down" | "neutral";
-    deltaKg: number; // over last 4 weeks
-  };
+  date: string;
+  estimated1RM: number;
+  topSetWeight: number;
 }
 
 export interface StrengthViewData {
   series: StrengthDataPoint[];
-  callout: StrengthCallout;
+  callout: {
+    allTimeBest: number;
+    lastSession: number;
+    trend: { direction: "up" | "down" | "neutral"; deltaKg: number };
+  };
 }
 
-// ─── VOLUME ────────────────────────────────────────────────────────────────
-
-/** One bar: weekly total volume (sum of weight × reps for all sets that week). */
 export interface VolumeDataPoint {
-  weekLabel: string;
-  isoWeek: string; // e.g. "2026-W09"
+  weekStart: string;
+  label: string;
   totalVolume: number;
   isCurrentWeek: boolean;
-}
-
-export interface VolumeCallout {
-  bestWeek: number;
-  thisWeek: number;
-  avgLast4Weeks: number;
+  /** Volume split by primary muscle group for the stacked bars. */
+  byMuscle: Partial<Record<MuscleGroup, number>>;
 }
 
 export interface VolumeViewData {
   series: VolumeDataPoint[];
-  callout: VolumeCallout;
+  muscles: MuscleGroup[];
+  callout: { bestWeek: number; thisWeek: number; avgLast4Weeks: number };
 }
-
-// ─── CONSISTENCY ───────────────────────────────────────────────────────────
 
 export type ConsistencyCellStatus = "empty" | "completed" | "pr";
 
-/** One cell in the week × day heatmap. */
 export interface ConsistencyCell {
   weekIndex: number;
-  dayOfWeek: number; // 0 = Monday, 6 = Sunday (ISO)
+  dayOfWeek: number;
   status: ConsistencyCellStatus;
-  date?: string; // YYYY-MM-DD when status is completed or pr
+  date: string;
+  sessionCount: number;
 }
 
 export interface ConsistencyViewData {
-  weeks: string[]; // week labels for X axis, e.g. ["W1", "W2", ...]
-  dayLabels: string[]; // ["M", "T", "W", "T", "F", "S", "S"] Mon–Sun
+  weekStarts: string[];
   cells: ConsistencyCell[];
   currentStreak: number;
   longestStreak: number;
+  totalSessions: number;
+  sessionsPerWeek: number;
 }
 
-// ─── AMRAP ────────────────────────────────────────────────────────────────
-
-/** One point on the AMRAP scatter: date vs reps, with new-high flag. */
 export interface AmrapDataPoint {
   date: string;
   reps: number;
+  weight: number;
   isNewHigh: boolean;
-}
-
-export interface AmrapCallout {
-  bestAmrap: number; // reps
-  lastAmrap: number;
-  avgLast6Sessions: number;
 }
 
 export interface AmrapViewData {
   series: AmrapDataPoint[];
-  callout: AmrapCallout;
+  callout: { bestAmrap: number; lastAmrap: number; avgLast6Sessions: number };
 }
 
-// ─── PERSONAL BESTS ───────────────────────────────────────────────────────
-
-/** One row: exercise + all-time best weight+reps + date; isNew if PR in last 7 days. */
 export interface PersonalBestRow {
   exerciseId: string;
   exerciseName: string;
   weight: number;
   reps: number;
-  date: string; // YYYY-MM-DD
+  estimated1RM: number;
+  date: string;
   isNew: boolean;
 }
 
@@ -111,16 +82,14 @@ export interface PersonalBestsViewData {
   items: PersonalBestRow[];
 }
 
-// ─── Union / hook result helpers ───────────────────────────────────────────
+export interface ProgressExercise {
+  id: string;
+  name: string;
+  primaryMuscle: MuscleGroup | null;
+  setCount: number;
+  hasAmrap: boolean;
+}
 
-export type ProgressViewData =
-  | { chip: "strength"; data: StrengthViewData }
-  | { chip: "volume"; data: VolumeViewData }
-  | { chip: "consistency"; data: ConsistencyViewData }
-  | { chip: "amrap"; data: AmrapViewData }
-  | { chip: "personal-bests"; data: PersonalBestsViewData };
-
-/** Generic result shape for progress data hooks. */
 export interface ProgressDataResult<T> {
   data: T | null;
   loading: boolean;

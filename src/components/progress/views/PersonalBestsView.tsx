@@ -1,148 +1,72 @@
 "use client";
 
-import { useState } from "react";
-import { usePersonalBestsData } from "@/hooks/progress";
-import { buildExportData } from "@/lib/progress-queries";
-import { LoadingStripes } from "../LoadingStripes";
-import { EmptyState } from "../EmptyState";
+import { motion } from "framer-motion";
+import { relativeDays } from "@/lib/dates";
+import { getPersonalBests } from "@/lib/progress-queries";
+import { useAsync } from "@/hooks/useAsync";
+import { EmptyState } from "../../ui/EmptyState";
+import { Icon } from "../../ui/Icon";
+import { SkeletonList } from "../../ui/Skeleton";
 
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDate();
-  const month = d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
-  const year = d.getFullYear();
-  return `${day} ${month} ${year}`;
-}
+export function PersonalBestsView({ userId }: { userId: string }) {
+  const { data, loading } = useAsync(() => getPersonalBests(userId), [userId]);
 
-interface PersonalBestsViewProps {
-  userId: string | null;
-}
+  if (loading) return <SkeletonList rows={5} />;
 
-function downloadExport(data: object, dateStr: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `lifting-export-${dateStr}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/** PERSONAL BESTS chip view: full-width list of exercise PRs, no callout. */
-export function PersonalBestsView({ userId }: PersonalBestsViewProps) {
-  const [exporting, setExporting] = useState(false);
-  const { data, loading, error } = usePersonalBestsData(userId);
-
-  const handleExport = async () => {
-    if (!userId || exporting) return;
-    setExporting(true);
-    try {
-      const payload = await buildExportData(userId);
-      downloadExport(payload, payload.exportedAt);
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  if (loading) {
+  if (!data || data.items.length === 0) {
     return (
-      <div className="w-full bg-[#0A0A0A]">
-        <LoadingStripes />
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="w-full bg-[#0A0A0A] px-4 py-6">
-        <EmptyState />
-      </div>
-    );
-  }
-
-  const { items } = data;
-
-  const exportButton = (
-    <div className="w-full px-4 pb-4 pt-2">
-      <button
-        type="button"
-        onClick={handleExport}
-        disabled={!userId || exporting}
-        className="w-full border border-[#C8FF00] bg-transparent py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#C8FF00] disabled:opacity-50"
-      >
-        {exporting ? "EXPORTING…" : "EXPORT LIFTING DATA"}
-      </button>
-    </div>
-  );
-
-  if (items.length === 0) {
-    return (
-      <div className="w-full bg-[#0A0A0A]">
-        <div className="px-4 pt-4">
-          <h2 className="text-lg font-bold uppercase tracking-wide text-[#F2F2F0]">
-            PERSONAL BESTS
-          </h2>
-          <p className="mt-1 text-[10px] font-normal uppercase tracking-[0.2em] text-[#3A3A3A]">
-            Heaviest set per exercise, most recent first
-          </p>
-        </div>
-        <div className="px-4 py-6">
-          <EmptyState />
-        </div>
-        {exportButton}
-      </div>
+      <EmptyState
+        icon="trophy"
+        title="No personal bests yet"
+        body="Every first set you log becomes your baseline. Beat it and it shows up here."
+      />
     );
   }
 
   return (
-    <div className="w-full bg-[#0A0A0A]">
-      <div className="px-4 pt-4">
-        <h2 className="text-lg font-bold uppercase tracking-wide text-[#F2F2F0]">
-          PERSONAL BESTS
-        </h2>
-        <p className="mt-1 text-[10px] font-normal uppercase tracking-[0.2em] text-[#3A3A3A]">
-          Heaviest set per exercise, most recent first
-        </p>
-      </div>
-
-      <ul className="w-full list-none px-4 py-4">
-        {items.map((row, i) => (
-          <li
-            key={row.exerciseId}
-            className={`flex w-full items-start justify-between py-3 ${
-              i > 0 ? "border-t border-[#3A3A3A]" : ""
+    <div className="space-y-2">
+      {data.items.map((pb, i) => (
+        <motion.div
+          key={pb.exerciseId}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: Math.min(i * 0.03, 0.3) }}
+          className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-lg)] bg-surface px-4 py-3 shadow-soft"
+        >
+          <span
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+              pb.isNew ? "bg-pop/20 text-pop" : "bg-surface-2 text-fg-subtle"
             }`}
           >
-            <div className="flex min-w-0 flex-1 flex-col">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-[#F2F2F0]">
-                  {row.exerciseName}
-                </span>
-                {row.isNew && (
-                  <span className="shrink-0 bg-[#C8FF00] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#0A0A0A]">
-                    NEW
-                  </span>
-                )}
-              </div>
-              <p className="mt-0.5 text-[10px] font-normal uppercase tracking-[0.2em] text-[#3A3A3A]">
-                {formatDate(row.date)}
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-col items-end text-right">
-              <p className="text-lg font-bold text-[#C8FF00]">
-                {row.weight} KG
-              </p>
-              <p className="mt-0.5 text-[10px] font-normal uppercase tracking-[0.2em] text-[#3A3A3A]">
-                × {row.reps} REPS
-              </p>
-            </div>
-          </li>
-        ))}
-      </ul>
+            <Icon name="trophy" size={20} />
+          </span>
 
-      {exportButton}
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2">
+              <span className="min-w-0 truncate text-[15px] font-semibold">
+                {pb.exerciseName}
+              </span>
+              {pb.isNew && (
+                <span className="shrink-0 rounded-full bg-pop/20 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-pop">
+                  New
+                </span>
+              )}
+            </span>
+            <span className="mt-0.5 block text-[12.5px] text-fg-muted">
+              {relativeDays(pb.date)} · est. 1RM {pb.estimated1RM} kg
+            </span>
+          </span>
+
+          <span className="shrink-0 text-right">
+            <span className="block font-display text-[19px] font-extrabold leading-none tabular">
+              {pb.weight} kg
+            </span>
+            <span className="mt-0.5 block text-[12px] text-fg-muted tabular">
+              × {pb.reps}
+            </span>
+          </span>
+        </motion.div>
+      ))}
     </div>
   );
 }

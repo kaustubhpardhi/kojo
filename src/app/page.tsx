@@ -1,15 +1,10 @@
-import { Suspense } from "react";
-import { HomePageContent } from "./HomePageContent";
-import { LoadingScreen } from "@/components/LoadingScreen";
-
-function HomePageFallback() {
-  return <LoadingScreen />;
-}
+import { AppShell } from "@/components/AppShell";
+import { HomeContent } from "./HomeContent";
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<HomePageFallback />}>
-      <HomePageContent />
-    </Suspense>
+    <AppShell>
+      <HomeContent />
+    </AppShell>
   );
 }

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Maskable: artwork kept inside the 80% safe zone so platform masks can't clip it. -->
+  <rect width="512" height="512" fill="#ff7a59"/>
+  <g fill="#2b0d03">
+    <rect x="154" y="166" width="204" height="46" rx="23"/>
+    <rect x="154" y="300" width="204" height="46" rx="23"/>
+    <rect x="233" y="200" width="46" height="112" rx="23"/>
+  </g>
+</svg>
