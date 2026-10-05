@@ -44,7 +44,8 @@ create table public.set_logs (
   weight numeric(6,2) not null default 0,
   reps integer not null default 0,
   is_amrap boolean default false,
-  logged_at timestamptz default now()
+  logged_at timestamptz default now(),
+  override_exercise_name text
 );
 
 -- ============================================

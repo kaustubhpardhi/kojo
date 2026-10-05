@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { ExerciseWithPrevious } from "@/lib/database.types";
+import { useWorkoutSession } from "@/contexts/WorkoutSessionContext";
 import { SetInput } from "./SetInput";
 
 interface ExerciseCardProps {
@@ -16,6 +17,7 @@ interface ExerciseCardProps {
     isAmrap: boolean,
   ) => void;
   onExerciseComplete: () => void;
+  onOpenReplace?: () => void;
 }
 
 export function ExerciseCard({
@@ -25,7 +27,10 @@ export function ExerciseCard({
   completedSets,
   onSetComplete,
   onExerciseComplete,
+  onOpenReplace,
 }: ExerciseCardProps) {
+  const { replacements, clearReplacement } = useWorkoutSession();
+  const replacement = replacements[exercise.id];
   const [setData, setSetData] = useState<
     Record<number, { weight: string; reps: string }>
   >(() => {
@@ -77,9 +82,31 @@ export function ExerciseCard({
         <p className="text-[10px] font-normal uppercase tracking-[0.2em] text-[#3A3A3A] mb-1">
           Exercise {exerciseIndex + 1} of {totalExercises}
         </p>
-        <h2 className="text-2xl font-bold text-[#F2F2F0] leading-tight">
-          {exercise.name}
-        </h2>
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <h2 className="text-2xl font-bold text-[#F2F2F0] leading-tight">
+            {replacement ?? exercise.name}
+          </h2>
+          {replacement && (
+            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#3A3A3A]">
+              (replaced)
+            </span>
+          )}
+          {onOpenReplace && (
+            <button
+              type="button"
+              onClick={() =>
+                replacement ? clearReplacement(exercise.id) : onOpenReplace()
+              }
+              className={`shrink-0 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] bg-transparent border ${
+                replacement
+                  ? "border-[#C8FF00] text-[#C8FF00]"
+                  : "border-[#3A3A3A] text-[#3A3A3A]"
+              }`}
+            >
+              {replacement ? "Revert" : "Replace"}
+            </button>
+          )}
+        </div>
         <p className="text-xs text-[#3A3A3A] mt-1 tracking-wide">
           {exercise.sets} sets × {exercise.rep_range_low}–{exercise.rep_range_high} reps
           {exercise.amrap_last_set && " · last AMRAP"}

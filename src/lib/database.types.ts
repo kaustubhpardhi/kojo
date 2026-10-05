@@ -32,6 +32,7 @@ export interface SetLog {
   reps: number;
   is_amrap: boolean;
   logged_at: string;
+  override_exercise_name: string | null;
 }
 
 export interface SessionWithLogs extends Session {
@@ -62,7 +63,9 @@ export interface Database {
       };
       set_logs: {
         Row: SetLog;
-        Insert: Omit<SetLog, "id" | "logged_at">;
+        Insert: Omit<SetLog, "id" | "logged_at" | "override_exercise_name"> & {
+          override_exercise_name?: string | null;
+        };
         Update: Partial<Omit<SetLog, "id">>;
       };
     };

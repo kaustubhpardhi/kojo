@@ -135,6 +135,7 @@ export async function logSet(
   weight: number,
   reps: number,
   isAmrap: boolean = false,
+  overrideExerciseName?: string | null,
 ): Promise<SetLog> {
   // Check if set already exists (upsert)
   const { data: existingRow } = await supabase
@@ -154,6 +155,7 @@ export async function logSet(
         reps,
         is_amrap: isAmrap,
         logged_at: new Date().toISOString(),
+        override_exercise_name: overrideExerciseName ?? null,
       } as never)
       .eq("id", existing.id)
       .select()
@@ -171,6 +173,7 @@ export async function logSet(
       weight,
       reps,
       is_amrap: isAmrap,
+      override_exercise_name: overrideExerciseName ?? null,
     } as never)
     .select()
     .single();

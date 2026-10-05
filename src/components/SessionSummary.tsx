@@ -25,6 +25,7 @@ export function SessionSummary({
     string,
     {
       name: string;
+      overrideName: string | null;
       sets: { setNumber: number; weight: number; reps: number; isAmrap: boolean }[];
     }
   >();
@@ -33,7 +34,11 @@ export function SessionSummary({
     const exerciseName = log.exercise?.name || "Unknown";
     const exerciseId = log.exercise_id;
     if (!exerciseMap.has(exerciseId)) {
-      exerciseMap.set(exerciseId, { name: exerciseName, sets: [] });
+      exerciseMap.set(exerciseId, {
+        name: exerciseName,
+        overrideName: null,
+        sets: [],
+      });
     }
     exerciseMap.get(exerciseId)!.sets.push({
       setNumber: log.set_number,
@@ -41,6 +46,14 @@ export function SessionSummary({
       reps: log.reps,
       isAmrap: log.is_amrap,
     });
+  }
+
+  for (const [exerciseId, ex] of exerciseMap) {
+    const logsForEx = session.set_logs
+      .filter((l) => l.exercise_id === exerciseId)
+      .sort((a, b) => a.set_number - b.set_number);
+    const last = logsForEx[logsForEx.length - 1];
+    ex.overrideName = last?.override_exercise_name ?? null;
   }
 
   if (!isOpen) return null;
@@ -89,9 +102,16 @@ export function SessionSummary({
         <div>
           {Array.from(exerciseMap.entries()).map(([id, exercise]) => (
             <div key={id} className="border-b border-[#3A3A3A] py-4">
-              <h4 className="font-bold text-sm text-[#F2F2F0] mb-3">
-                {exercise.name}
-              </h4>
+              <div className="mb-3">
+                <h4 className="font-bold text-sm text-[#F2F2F0]">
+                  {exercise.name}
+                </h4>
+                {exercise.overrideName && (
+                  <p className="text-xs text-[#3A3A3A] mt-1">
+                    {exercise.overrideName} (sub for {exercise.name})
+                  </p>
+                )}
+              </div>
               <div className="space-y-2">
                 {exercise.sets
                   .sort((a, b) => a.setNumber - b.setNumber)

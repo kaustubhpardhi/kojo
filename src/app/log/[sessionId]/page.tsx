@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { WorkoutSessionProvider, useWorkoutSession } from "@/contexts/WorkoutSessionContext";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { ReplacementSheet } from "@/components/ReplacementSheet";
 import { SessionComplete } from "@/components/SessionComplete";
 import {
   getExercisesWithPrevious,
@@ -28,10 +30,24 @@ const DAY_FOCUS: Record<string, string> = {
 };
 
 export default function LogPage() {
+  return (
+    <WorkoutSessionProvider>
+      <LogSessionPage />
+    </WorkoutSessionProvider>
+  );
+}
+
+function LogSessionPage() {
   const params = useParams();
   const router = useRouter();
   const { user, loading } = useAuth();
   const sessionId = params.sessionId as string;
+  const {
+    replacements,
+    syncReplacementsFromLogs,
+    clearAllReplacements,
+    setReplacement,
+  } = useWorkoutSession();
 
   const [session, setSession] = useState<Session | null>(null);
   const [exercises, setExercises] = useState<ExerciseWithPrevious[]>([]);
@@ -44,6 +60,7 @@ export default function LogPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSessionOverview, setShowSessionOverview] = useState(false);
+  const [replacementSheetOpen, setReplacementSheetOpen] = useState(false);
 
   const loadSession = useCallback(async () => {
     if (!user || !sessionId) return;
@@ -70,6 +87,7 @@ export default function LogPage() {
       setExercises(exercisesData);
 
       const existingLogs = await getSetLogsForSession(sessionId);
+      syncReplacementsFromLogs(existingLogs);
       if (existingLogs.length > 0) {
         const map = new Map<string, Map<number, { weight: number; reps: number }>>();
         for (const log of existingLogs) {
@@ -95,7 +113,7 @@ export default function LogPage() {
     } finally {
       setLoadingData(false);
     }
-  }, [user, sessionId, router]);
+  }, [user, sessionId, router, syncReplacementsFromLogs]);
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
@@ -112,6 +130,10 @@ export default function LogPage() {
       new Map<number, { weight: number; reps: number }>(),
     [completedSetsMap, currentExercise?.id],
   );
+
+  useEffect(() => {
+    setReplacementSheetOpen(false);
+  }, [currentExercise?.id]);
 
   const totalCompletedSets = useMemo(() => {
     let total = 0;
@@ -132,6 +154,7 @@ export default function LogPage() {
   ) => {
     if (!currentExercise || saving) return;
     setSaving(true);
+    const overrideName = replacements[currentExercise.id] ?? null;
     try {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         await queueSetLog({
@@ -141,6 +164,7 @@ export default function LogPage() {
           weight,
           reps,
           is_amrap: isAmrap,
+          override_exercise_name: overrideName,
         });
       } else {
         await logSet(
@@ -150,6 +174,7 @@ export default function LogPage() {
           weight,
           reps,
           isAmrap,
+          overrideName,
         );
       }
       setCompletedSetsMap((prev) => {
@@ -172,6 +197,7 @@ export default function LogPage() {
     } else {
       try {
         await completeSession(sessionId);
+        clearAllReplacements();
         if (user) {
           const streakData = await getStreaks(user.id);
           setStreaks(streakData);
@@ -207,7 +233,10 @@ export default function LogPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => router.push("/")}
+              onClick={() => {
+                clearAllReplacements();
+                router.push("/");
+              }}
               className="tap-flash w-10 h-10 flex items-center justify-center border border-[#3A3A3A] text-[#F2F2F0] font-bold"
               aria-label="Back"
             >
@@ -286,8 +315,16 @@ export default function LogPage() {
           completedSets={currentCompletedSets}
           onSetComplete={handleSetComplete}
           onExerciseComplete={handleExerciseComplete}
+          onOpenReplace={() => setReplacementSheetOpen(true)}
         />
       </div>
+
+      <ReplacementSheet
+        isOpen={replacementSheetOpen}
+        onClose={() => setReplacementSheetOpen(false)}
+        originalExerciseName={currentExercise.name}
+        onSelect={(name) => setReplacement(currentExercise.id, name)}
+      />
 
       {/* Session overview — full-screen takeover */}
       {showSessionOverview && (
@@ -330,7 +367,7 @@ export default function LogPage() {
                       className={`tap-flash w-full flex items-center justify-between py-4 text-left border-l-4 ${isCurrent ? "border-l-[#C8FF00]" : "border-l-transparent"}`}
                     >
                       <span className={`font-bold text-sm ${isCurrent ? "text-[#C8FF00]" : "text-[#F2F2F0]"}`}>
-                        {i + 1}. {ex.name}
+                        {i + 1}. {replacements[ex.id] ?? ex.name}
                       </span>
                       <span className={`text-xs tabular-nums font-mono ${isFullyDone ? "text-[#C8FF00]" : "text-[#3A3A3A]"}`}>
                         {completedCount}/{ex.sets}

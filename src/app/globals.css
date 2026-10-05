@@ -91,3 +91,12 @@ input:focus {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 0.8; }
 }
+
+/* Wger replacement sheet: skeleton rows */
+@keyframes wger-placeholder-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+.wger-placeholder-pulse {
+  animation: wger-placeholder-pulse 1.2s ease-in-out infinite;
+}

@@ -13,6 +13,7 @@ interface OfflineSetLog {
   weight: number;
   reps: number;
   is_amrap: boolean;
+  override_exercise_name?: string | null;
   timestamp: number;
 }
 
@@ -51,6 +52,7 @@ export async function syncOfflineLogs(): Promise<number> {
           weight: log.weight,
           reps: log.reps,
           is_amrap: log.is_amrap,
+          override_exercise_name: log.override_exercise_name ?? null,
         };
         await supabase
           .from("set_logs")
@@ -64,6 +66,7 @@ export async function syncOfflineLogs(): Promise<number> {
           weight: log.weight,
           reps: log.reps,
           is_amrap: log.is_amrap,
+          override_exercise_name: log.override_exercise_name ?? null,
         };
         await supabase.from("set_logs").insert(insertPayload as never);
       }
