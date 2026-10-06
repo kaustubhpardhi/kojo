@@ -7,7 +7,9 @@ import type { NextConfig } from "next";
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  turbopack: {},
+  // There's a package-lock.json in the home directory that would otherwise win
+  // the workspace-root guess and make Turbopack lose track of this app.
+  turbopack: { root: process.cwd() },
 };
 
 export default nextConfig;
