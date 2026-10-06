@@ -15,7 +15,12 @@ export function ServiceWorkerRegistration() {
     }
 
     // Registering after load keeps the worker off the critical path.
-    const register = () => void navigator.serviceWorker.register("/sw.js").catch(() => {});
+    const register = () => {
+      void navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => reg.update())
+        .catch(() => {});
+    };
     if (document.readyState === "complete") register();
     else window.addEventListener("load", register, { once: true });
   }, []);

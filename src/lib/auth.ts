@@ -62,9 +62,8 @@ export async function signOut() {
 }
 
 /**
- * The service worker caches rendered pages so the app opens without signal.
- * Those belong to whoever was signed in, so drop them on the way out. Matched
- * by suffix to stay decoupled from the cache version in public/sw.js.
+ * Older workers (reps-v2) cached rendered pages and RSC payloads. Wipe any
+ * leftover of those on sign-out so the next account never sees them.
  */
 async function dropCachedPages() {
   if (typeof caches === "undefined") return;
