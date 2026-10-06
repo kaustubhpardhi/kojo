@@ -10,7 +10,9 @@ import {
   getFavoriteExerciseIds,
   getRecentExerciseIds,
   toggleFavorite,
+  type NewExercise,
 } from "@/lib/queries";
+import { friendlyError } from "@/lib/errors";
 import { searchExercises as searchWger, type WgerExercise } from "@/lib/wger-api";
 import { EQUIPMENT, MUSCLE_GROUPS, type Equipment, type Exercise, type MuscleGroup } from "@/lib/database.types";
 import { useAsync } from "@/hooks/useAsync";
@@ -54,7 +56,7 @@ export function ExercisePicker({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
 
-  const { data: library, loading, reload } = useAsync(
+  const { data: library, loading, error: libraryError, reload } = useAsync(
     () => getExerciseLibrary(userId),
     [userId],
     open,
@@ -118,21 +120,25 @@ export function ExercisePicker({
     [multi, onClose, onPick],
   );
 
-  const handleCreate = async (name: string) => {
+  const handleCreate = async (input: NewExercise | string) => {
     setCreating(true);
     try {
-      const exercise = await createExercise(userId, {
-        name,
-        primary_muscle: muscle,
-        equipment,
-      });
+      const draft: NewExercise =
+        typeof input === "string"
+          ? { name: input, primary_muscle: muscle, equipment }
+          : input;
+      const exercise = await createExercise(userId, draft);
       reload();
       setQuery("");
       handlePick(exercise);
       toast({ message: `Added "${exercise.name}" to your library`, icon: "check", tone: "success" });
     } catch (err) {
       console.error(err);
-      toast({ message: "Couldn't create that exercise", icon: "x", tone: "danger" });
+      toast({
+        message: friendlyError(err, "Couldn't create that exercise"),
+        icon: "x",
+        tone: "danger",
+      });
     } finally {
       setCreating(false);
     }
@@ -215,7 +221,19 @@ export function ExercisePicker({
           </div>
         )}
 
+        {!loading && libraryError && (
+          <EmptyState
+            icon="cloudOff"
+            title="Can't load your library"
+            body={friendlyError(
+              libraryError,
+              "Something went wrong loading exercises. Try again in a moment.",
+            )}
+          />
+        )}
+
         {!loading &&
+          !libraryError &&
           filtered.map((exercise) => (
             <ExerciseRow
               key={exercise.id}
@@ -241,11 +259,17 @@ export function ExercisePicker({
           </Button>
         )}
 
-        {!loading && trimmed.length >= 2 && (
+        {!loading && !libraryError && trimmed.length >= 2 && (
           <WgerResults
             query={trimmed}
             onPick={(w) =>
-              void handleCreate(w.name).catch(() => {
+              void handleCreate({
+                name: w.name,
+                source: "wger",
+                wger_id: w.id,
+                primary_muscle: muscleFromWger(w),
+                equipment,
+              }).catch(() => {
                 /* handled in handleCreate */
               })
             }
@@ -253,7 +277,7 @@ export function ExercisePicker({
           />
         )}
 
-        {!loading && filtered.length === 0 && trimmed.length < 2 && (
+        {!loading && !libraryError && filtered.length === 0 && trimmed.length < 2 && (
           <EmptyState
             icon="search"
             title={tab === "favorites" ? "No favorites yet" : "Nothing here"}
@@ -274,6 +298,30 @@ function score(name: string, q: string): number {
   if (n === q) return 0;
   if (n.startsWith(q)) return 1;
   return 2 + n.indexOf(q);
+}
+
+/** Best-effort map from wger's category / muscle labels onto our MuscleGroup. */
+function muscleFromWger(w: WgerExercise): MuscleGroup | null {
+  const labels = [w.category?.name, ...(w.muscles ?? []).map((m) => m.name)]
+    .filter(Boolean)
+    .map((s) => s.toLowerCase());
+
+  const hit = (needle: string) => labels.some((l) => l.includes(needle));
+  if (hit("chest") || hit("pectoral")) return "chest";
+  if (hit("lat") || hit("back") || hit("trapezius") || hit("rhomboid")) return "back";
+  if (hit("shoulder") || hit("deltoid")) return "shoulders";
+  if (hit("bicep")) return "biceps";
+  if (hit("tricep")) return "triceps";
+  if (hit("forearm")) return "forearms";
+  if (hit("quad") || hit("thigh")) return "quads";
+  if (hit("hamstring")) return "hamstrings";
+  if (hit("glute")) return "glutes";
+  if (hit("calf") || hit("calve")) return "calves";
+  if (hit("abs") || hit("core") || hit("oblique")) return "core";
+  if (hit("cardio")) return "cardio";
+  if (hit("arm")) return "biceps";
+  if (hit("leg")) return "quads";
+  return null;
 }
 
 function ExerciseRow({

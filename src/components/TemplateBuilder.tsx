@@ -15,6 +15,7 @@ import { SkeletonList } from "./ui/Skeleton";
 import { Stepper } from "./ui/Stepper";
 import { useToast } from "./ui/Toast";
 import { useAsync } from "@/hooks/useAsync";
+import { friendlyError } from "@/lib/errors";
 import { createTemplate, getTemplate, updateTemplate } from "@/lib/queries";
 import type { Exercise, ExercisePlan } from "@/lib/database.types";
 
@@ -132,7 +133,11 @@ export function TemplateBuilder({ templateId }: { templateId?: string }) {
       router.push("/workouts");
     } catch (err) {
       console.error(err);
-      toast({ message: "Couldn't save that", icon: "x", tone: "danger" });
+      toast({
+        message: friendlyError(err, "Couldn't save that"),
+        icon: "x",
+        tone: "danger",
+      });
     } finally {
       setSaving(false);
     }
