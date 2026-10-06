@@ -317,7 +317,8 @@ export async function getLiveSession(
   const [exercisesRes, logsRes] = await Promise.all([
     supabase
       .from("session_exercises")
-      .select("*, exercise:exercises(*)")
+      // Disambiguate: session_exercises also FKs exercises via swapped_from_exercise_id.
+      .select("*, exercise:exercises!session_exercises_exercise_id_fkey(*)")
       .eq("session_id", sessionId)
       .order("position"),
     supabase.from("set_logs").select("*").eq("session_id", sessionId).order("set_number"),
@@ -421,7 +422,7 @@ export async function getSessionDetail(sessionId: string): Promise<SessionWithDe
   const [exercisesRes, logsRes] = await Promise.all([
     supabase
       .from("session_exercises")
-      .select("*, exercise:exercises(*)")
+      .select("*, exercise:exercises!session_exercises_exercise_id_fkey(*)")
       .eq("session_id", sessionId)
       .order("position"),
     supabase.from("set_logs").select("*").eq("session_id", sessionId).order("set_number"),
