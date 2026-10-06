@@ -153,7 +153,14 @@ function Logger({
   const handleSwap = async (to: Exercise, updateTemplateToo: boolean) => {
     if (!current) return;
     const fromName = current.exercise.name;
-    await swapExercise(current.id, to);
+    const fromId = current.exercise_id;
+    try {
+      await swapExercise(current.id, to);
+    } catch (err) {
+      console.error("Failed to swap exercise", err);
+      toast({ message: "Couldn't swap that exercise", icon: "x", tone: "danger" });
+      return;
+    }
 
     if (updateTemplateToo && session.template_id) {
       try {
@@ -164,7 +171,7 @@ function Logger({
             emoji: template.emoji,
             color: template.color,
             exercises: template.exercises.map((row) =>
-              row.exercise_id === current.exercise_id
+              row.exercise_id === fromId
                 ? { ...toPlan(row), exercise_id: to.id }
                 : toPlan(row),
             ),

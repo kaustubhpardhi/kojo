@@ -31,7 +31,7 @@ export function SwapSheet({
 }: SwapSheetProps) {
   const [picked, setPicked] = useState<Exercise | null>(null);
 
-  const close = () => {
+  const dismiss = () => {
     setPicked(null);
     onClose();
   };
@@ -39,14 +39,14 @@ export function SwapSheet({
   const confirm = (updateTemplate: boolean) => {
     if (!picked) return;
     onSwap(picked, updateTemplate);
-    close();
+    dismiss();
   };
 
   if (picked && canUpdateTemplate) {
     return (
       <Sheet
-        open
-        onClose={close}
+        open={open}
+        onClose={dismiss}
         title="Apply the swap where?"
         subtitle={`${from.name} → ${picked.name}`}
       >
@@ -78,14 +78,19 @@ export function SwapSheet({
   return (
     <ExercisePicker
       open={open}
-      onClose={close}
+      onClose={dismiss}
       userId={userId}
       multi={false}
+      closeOnPick={!canUpdateTemplate}
       title={`Swap ${from.name}`}
       excludeIds={[from.id]}
       onPick={(exercise) => {
-        if (canUpdateTemplate) setPicked(exercise);
-        else onSwap(exercise, false);
+        if (canUpdateTemplate) {
+          setPicked(exercise);
+        } else {
+          onSwap(exercise, false);
+          dismiss();
+        }
       }}
     />
   );

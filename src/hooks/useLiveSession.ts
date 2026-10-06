@@ -204,20 +204,30 @@ export function useLiveSession(userId: string, sessionId: string) {
     async (sessionExerciseId: string, to: Exercise) => {
       const row = exercises.find((e) => e.id === sessionExerciseId);
       if (!row) return;
+      const fromId = row.exercise_id;
+      const previous = {
+        exercise: row.exercise,
+        exercise_id: row.exercise_id,
+        swapped_from_exercise_id: row.swapped_from_exercise_id,
+        logged: row.logged,
+        previousSets: row.previousSets,
+        previousBestWeight: row.previousBestWeight,
+      };
       const history = await getExerciseHistory(userId, [to.id], sessionId);
       const past = history.get(to.id);
       patchExercise(sessionExerciseId, {
         exercise: to,
         exercise_id: to.id,
-        swapped_from_exercise_id: row.exercise_id,
+        swapped_from_exercise_id: fromId,
         logged: new Map(),
         previousSets: past?.previousSets ?? [],
         previousBestWeight: past?.bestWeight ?? 0,
       });
       try {
-        await swapSessionExercise(sessionExerciseId, row.exercise_id, to.id);
+        await swapSessionExercise(sessionExerciseId, fromId, to.id);
       } catch (err) {
-        console.error("Failed to swap exercise", err);
+        patchExercise(sessionExerciseId, previous);
+        throw err;
       }
     },
     [exercises, patchExercise, sessionId, userId],

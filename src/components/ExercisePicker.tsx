@@ -32,6 +32,11 @@ interface ExercisePickerProps {
   /** Called once per chosen exercise; sheet stays open in multi mode. */
   onPick: (exercise: Exercise) => void;
   multi?: boolean;
+  /**
+   * When false (and multi is false), picking an exercise does not dismiss the
+   * sheet — used by SwapSheet so it can show a follow-up "apply where?" step.
+   */
+  closeOnPick?: boolean;
   title?: string;
   excludeIds?: string[];
 }
@@ -44,6 +49,7 @@ export function ExercisePicker({
   userId,
   onPick,
   multi = true,
+  closeOnPick = true,
   title = "Add exercises",
   excludeIds = [],
 }: ExercisePickerProps) {
@@ -113,11 +119,11 @@ export function ExercisePicker({
       onPick(exercise);
       if (multi) {
         setAdded((prev) => [...prev, exercise.id]);
-      } else {
+      } else if (closeOnPick) {
         onClose();
       }
     },
-    [multi, onClose, onPick],
+    [closeOnPick, multi, onClose, onPick],
   );
 
   const handleCreate = async (input: NewExercise | string) => {
