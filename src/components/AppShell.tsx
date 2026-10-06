@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useAuth } from "./AuthProvider";
 import { LoadingScreen } from "./LoadingScreen";
 import { TabBar } from "./TabBar";
-import { StartWorkoutSheet } from "./StartWorkoutSheet";
+import { StartWorkoutProvider, useStartWorkoutSheet } from "./StartWorkoutContext";
 import { InstallPrompt } from "./InstallPrompt";
 import { OfflineBanner } from "./OfflineBanner";
 
@@ -13,7 +13,6 @@ import { OfflineBanner } from "./OfflineBanner";
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [startOpen, setStartOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -22,16 +21,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   if (loading || !user) return <LoadingScreen />;
 
   return (
-    <>
+    <StartWorkoutProvider userId={user.id}>
       <OfflineBanner />
       <main className="mx-auto min-h-dvh w-full max-w-lg pb-tabbar">{children}</main>
-      <TabBar onStart={() => setStartOpen(true)} />
-      <StartWorkoutSheet
-        open={startOpen}
-        onClose={() => setStartOpen(false)}
-        userId={user.id}
-      />
+      <AppTabBar />
       <InstallPrompt />
-    </>
+    </StartWorkoutProvider>
   );
+}
+
+function AppTabBar() {
+  const { openStart } = useStartWorkoutSheet();
+  return <TabBar onStart={() => openStart()} />;
 }

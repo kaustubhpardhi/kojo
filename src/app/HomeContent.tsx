@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Calendar } from "@/components/Calendar";
+import { useStartWorkoutSheet } from "@/components/StartWorkoutContext";
 import { TemplateCard } from "@/components/TemplateCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -26,6 +27,7 @@ export function HomeContent() {
   const userId = user!.id;
   const router = useRouter();
   const { prefs } = usePrefs();
+  const { openStart } = useStartWorkoutSheet();
   const { start, starting } = useStartWorkout(userId);
   const [month, setMonth] = useState(() => {
     const now = new Date();
@@ -203,6 +205,7 @@ export function HomeContent() {
           onSelectSession={(session) =>
             router.push(session.completed_at ? `/history/${session.id}` : `/log/${session.id}`)
           }
+          onSelectEmptyDate={(date) => openStart(date)}
         />
       </section>
 

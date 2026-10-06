@@ -17,6 +17,8 @@ interface CalendarProps {
   month: number;
   onMonthChange: (year: number, month: number) => void;
   onSelectSession: (session: Session) => void;
+  /** Empty past/today cells — used to backfill a missed session. */
+  onSelectEmptyDate?: (date: string) => void;
 }
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -27,6 +29,7 @@ export function Calendar({
   month,
   onMonthChange,
   onSelectSession,
+  onSelectEmptyDate,
 }: CalendarProps) {
   const [direction, setDirection] = useState(1);
   const { data: sessions, loading } = useAsync(
@@ -112,26 +115,37 @@ export function Calendar({
               const completed = daySessions.filter((s) => s.completed_at);
               const inProgress = daySessions.find((s) => !s.completed_at);
               const isToday = date === today;
+              const isFuture = date > today;
+              const canBackfill = !isFuture && daySessions.length === 0 && Boolean(onSelectEmptyDate);
               const dayNum = Number(date.slice(8, 10));
+              const disabled = daySessions.length === 0 && !canBackfill;
 
               return (
                 <button
                   key={date}
                   type="button"
-                  disabled={daySessions.length === 0}
+                  disabled={disabled}
                   onClick={() => {
                     haptic("tap");
-                    onSelectSession(inProgress ?? completed[0]);
+                    if (daySessions.length > 0) {
+                      onSelectSession(inProgress ?? completed[0]);
+                    } else if (canBackfill) {
+                      onSelectEmptyDate?.(date);
+                    }
                   }}
                   aria-label={`${date}${
                     completed.length ? `, ${completed.length} completed` : ""
-                  }${inProgress ? ", in progress" : ""}`}
+                  }${inProgress ? ", in progress" : ""}${
+                    canBackfill ? ", tap to log a workout" : ""
+                  }`}
                   className={cn(
                     "relative flex aspect-square flex-col items-center justify-center rounded-[12px] text-[14px] font-semibold tabular transition-colors",
                     completed.length > 0 && "bg-accent text-on-accent",
                     inProgress && "bg-accent-soft text-accent-fg ring-1 ring-accent",
                     daySessions.length === 0 && "text-fg-subtle",
+                    canBackfill && "active:bg-surface-2",
                     isToday && daySessions.length === 0 && "ring-1 ring-line",
+                    isFuture && "opacity-40",
                     daySessions.length > 0 && "active:scale-90",
                   )}
                 >
@@ -149,6 +163,12 @@ export function Calendar({
             })}
           </motion.div>
         </AnimatePresence>
+      )}
+
+      {onSelectEmptyDate && (
+        <p className="mt-2 px-1 text-center text-[12px] text-fg-subtle">
+          Tap an empty past day to log a missed session.
+        </p>
       )}
     </div>
   );
