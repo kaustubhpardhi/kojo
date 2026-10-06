@@ -45,18 +45,21 @@ export async function getTemplates(userId: string): Promise<TemplateSummary[]> {
       .order("position"),
     supabase
       .from("sessions")
-      .select("template_id, date")
+      .select("template_id, date, started_at")
       .eq("user_id", userId)
-      .not("completed_at", "is", null)
       .not("template_id", "is", null)
-      .order("date", { ascending: false }),
+      .order("started_at", { ascending: false }),
   ]);
 
   if (templatesRes.error) throw templatesRes.error;
   if (sessionsRes.error) throw sessionsRes.error;
 
+  // Most recently started session per template (completed or not).
   const lastByTemplate = new Map<string, string>();
-  for (const s of (sessionsRes.data ?? []) as { template_id: string; date: string }[]) {
+  for (const s of (sessionsRes.data ?? []) as {
+    template_id: string;
+    date: string;
+  }[]) {
     if (!lastByTemplate.has(s.template_id)) lastByTemplate.set(s.template_id, s.date);
   }
 

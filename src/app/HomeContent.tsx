@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Calendar } from "@/components/Calendar";
 import { useStartWorkoutSheet } from "@/components/StartWorkoutContext";
@@ -48,6 +48,21 @@ export function HomeContent() {
 
   const name = displayName(user);
   const weekRatio = stats ? Math.min(1, stats.week.completed / Math.max(1, stats.week.goal)) : 0;
+
+  /** Recently used templates first; unused ones fill the rest by list order. */
+  const quickStart = useMemo(() => {
+    if (!templates?.length) return [];
+    return [...templates]
+      .sort((a, b) => {
+        if (a.lastPerformed && b.lastPerformed) {
+          return b.lastPerformed.localeCompare(a.lastPerformed);
+        }
+        if (a.lastPerformed) return -1;
+        if (b.lastPerformed) return 1;
+        return a.position - b.position;
+      })
+      .slice(0, 4);
+  }, [templates]);
 
   return (
     <div className="px-4 pt-safe">
@@ -169,7 +184,7 @@ export function HomeContent() {
         )}
 
         <div className="space-y-2.5">
-          {templates?.slice(0, 3).map((template) => (
+          {quickStart.map((template) => (
             <TemplateCard
               key={template.id}
               template={template}
