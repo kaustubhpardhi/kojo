@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { todayStr } from "@/lib/dates";
 import { haptic } from "@/lib/haptics";
 import { queueSession } from "@/lib/offline";
-import { buildSessionSeed, insertSessionSeed } from "@/lib/queries";
+import { buildSessionSeed, insertSessionSeed, pruneEmptySessions } from "@/lib/queries";
 import { useToast } from "@/components/ui/Toast";
 
 /**
@@ -22,6 +22,11 @@ export function useStartWorkout(userId: string) {
       if (starting) return;
       setStarting(true);
       try {
+        // Drop unfinished sessions that never logged a set so they don't stick
+        // around as a fake "in progress" card after a cancelled start.
+        if (typeof navigator === "undefined" || navigator.onLine) {
+          await pruneEmptySessions(userId).catch(() => {});
+        }
         const seed = await buildSessionSeed(userId, date, templateId);
         if (typeof navigator !== "undefined" && !navigator.onLine) {
           await queueSession(seed);

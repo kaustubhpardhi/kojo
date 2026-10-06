@@ -1,5 +1,5 @@
 import { supabase } from "../supabase";
-import { computeStreaks, monthRange, todayStr, weekStart } from "../dates";
+import { addDays, computeStreaks, monthRange, todayStr, weekStart } from "../dates";
 import type {
   Exercise,
   ExercisePlan,
@@ -463,18 +463,48 @@ export async function getSessionsForMonth(
   return (data ?? []) as Session[];
 }
 
-/** An unfinished session, newest first — powers the "resume" card. */
+/**
+ * An unfinished session from the last few days — powers the "resume" card.
+ * Older abandoned drafts (and empty ghosts from failed starts) are ignored so
+ * finishing today's workout doesn't leave a months-old template stuck on Home.
+ */
 export async function getActiveSession(userId: string): Promise<Session | null> {
+  const since = addDays(todayStr(), -2);
   const { data, error } = await supabase
     .from("sessions")
     .select("*")
     .eq("user_id", userId)
     .is("completed_at", null)
-    .order("date", { ascending: false })
+    .gte("date", since)
+    .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) throw error;
   return (data as Session | null) ?? null;
+}
+
+/** Deletes unfinished sessions that never logged a set (safe to throw away). */
+export async function pruneEmptySessions(userId: string): Promise<number> {
+  const { data: open, error } = await supabase
+    .from("sessions")
+    .select("id")
+    .eq("user_id", userId)
+    .is("completed_at", null);
+  if (error) throw error;
+  if (!open?.length) return 0;
+
+  let removed = 0;
+  for (const row of open as { id: string }[]) {
+    const { count, error: cErr } = await supabase
+      .from("set_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("session_id", row.id);
+    if (cErr) throw cErr;
+    if ((count ?? 0) > 0) continue;
+    await deleteSession(row.id);
+    removed += 1;
+  }
+  return removed;
 }
 
 export async function getSessionsOnDate(userId: string, date: string): Promise<Session[]> {

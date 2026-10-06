@@ -20,7 +20,7 @@ import { SetRow } from "./SetRow";
 import { SwapSheet } from "./SwapSheet";
 import { useLiveSession } from "@/hooks/useLiveSession";
 import { friendlyDate } from "@/lib/dates";
-import { getTemplate, updateTemplate, toPlan } from "@/lib/queries";
+import { deleteSession, getTemplate, updateTemplate, toPlan } from "@/lib/queries";
 import { spring } from "@/lib/motion";
 import type { Exercise, LoggedSet } from "@/lib/database.types";
 
@@ -429,12 +429,34 @@ function Logger({
         open={exitOpen}
         onClose={() => setExitOpen(false)}
         title="Leave this workout?"
-        subtitle="Everything you've logged is already saved. You can pick up where you left off."
+        subtitle={
+          totals.logged > 0
+            ? "Everything you've logged is already saved. You can pick up where you left off."
+            : "Nothing logged yet — discarding won't lose any sets."
+        }
       >
         <div className="space-y-2.5 pb-4">
-          <Button block size="lg" variant="secondary" onClick={() => router.push("/")}>
-            Leave for now
-          </Button>
+          {totals.logged > 0 ? (
+            <Button block size="lg" variant="secondary" onClick={() => router.push("/")}>
+              Leave for now
+            </Button>
+          ) : (
+            <Button
+              block
+              size="lg"
+              variant="secondary"
+              onClick={async () => {
+                try {
+                  await deleteSession(sessionId);
+                } catch (err) {
+                  console.error(err);
+                }
+                router.replace("/");
+              }}
+            >
+              Discard workout
+            </Button>
+          )}
           {totals.logged > 0 && (
             <Button
               block
