@@ -181,6 +181,12 @@ input[type="number"]::-webkit-outer-spin-button {
   margin: 0;
 }
 
+/* Native date controls often force a min-width wider than the sheet. */
+input[type="date"] {
+  max-width: 100%;
+  min-width: 0;
+}
+
 .tabular {
   font-variant-numeric: tabular-nums;
 }

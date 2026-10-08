@@ -16,13 +16,18 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field(
   const autoId = useId();
   const fieldId = id ?? autoId;
   return (
-    <div>
+    <div className="min-w-0 max-w-full">
       {label && (
         <label htmlFor={fieldId} className="mb-1.5 block text-[13px] font-medium text-fg-muted">
           {label}
         </label>
       )}
-      <input ref={ref} id={fieldId} className={cn(BASE, "h-14 text-[16px]", className)} {...rest} />
+      <input
+        ref={ref}
+        id={fieldId}
+        className={cn(BASE, "h-14 max-w-full min-w-0 text-[16px]", className)}
+        {...rest}
+      />
       {hint && <p className="mt-1.5 text-xs text-fg-subtle">{hint}</p>}
     </div>
   );

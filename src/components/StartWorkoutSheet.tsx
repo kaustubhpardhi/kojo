@@ -71,7 +71,7 @@ export function StartWorkoutSheet({
         </Button>
       }
     >
-      <div className="space-y-3 pb-2">
+      <div className="min-w-0 space-y-3 pb-2">
         <Field
           type="date"
           label="Session date"

@@ -16,7 +16,7 @@
  *
  * Bump VERSION to invalidate every cache at once.
  */
-const VERSION = "reps-v3";
+const VERSION = "reps-v4";
 const SHELL = `${VERSION}-shell`;
 const STATIC = `${VERSION}-static`;
 const FONTS = `${VERSION}-fonts`;
