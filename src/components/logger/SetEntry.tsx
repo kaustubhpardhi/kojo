@@ -13,12 +13,14 @@ interface SetEntryProps {
   editing?: LoggedSet;
   onLog: (set: LoggedSet) => void;
   onCancelEdit?: () => void;
+  /** Fired when the user focuses or nudges inputs (e.g. dismiss rest). */
+  onInteract?: () => void;
 }
 
 /**
  * Weight/reps entry for the set in progress. Defaults come from, in order:
- * the set being edited, the same set last time, the previous set this session,
- * then the exercise's target weight.
+ * the set being edited, the previous set this session, the same set last time,
+ * then the exercise's target weight / rep range.
  */
 export function SetEntry({
   exercise,
@@ -27,6 +29,7 @@ export function SetEntry({
   editing,
   onLog,
   onCancelEdit,
+  onInteract,
 }: SetEntryProps) {
   const ghost = exercise.previousSets.find((s) => s.setNumber === setNumber);
   const lastThisSession = exercise.logged.get(setNumber - 1);
@@ -44,7 +47,14 @@ export function SetEntry({
         : null);
 
     setWeight(seed?.weight ?? "");
-    setReps(editing?.reps ?? ghost?.reps ?? exercise.rep_range_low ?? "");
+    // Prefer same reps as the last set this session so set 2 matches set 1.
+    setReps(
+      editing?.reps ??
+        lastThisSession?.reps ??
+        ghost?.reps ??
+        exercise.rep_range_low ??
+        "",
+    );
     // Re-seed whenever we move to a different set or exercise.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise.id, setNumber, editing?.setNumber]);
@@ -60,29 +70,33 @@ export function SetEntry({
   const fillFromLast = () => {
     const source = lastThisSession ?? ghost;
     if (!source) return;
+    onInteract?.();
     setWeight(source.weight);
     setReps(source.reps);
   };
 
+  const lastHint = lastThisSession ?? ghost;
+
   return (
-    <div className="rounded-[var(--radius-lg)] bg-surface p-4 shadow-soft">
+    <div className="min-w-0 overflow-hidden rounded-[var(--radius-lg)] bg-surface p-4 shadow-soft">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="font-display text-[17px] font-bold">
           {editing ? `Edit set ${setNumber}` : `Set ${setNumber}`}
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {isAmrap && (
             <span className="rounded-full bg-pop/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-pop">
               AMRAP — go to failure
             </span>
           )}
           {!isAmrap && repTarget && (
-            <span className="text-[13px] text-fg-muted">target {repTarget}</span>
+            <span className="truncate text-[13px] text-fg-muted">target {repTarget}</span>
           )}
         </div>
       </div>
 
-      <div className="flex gap-3">
+      {/* Stack on phone width — side-by-side steppers overflow ~390px. */}
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
         <Stepper
           label="Weight"
           unit="kg"
@@ -91,8 +105,9 @@ export function SetEntry({
           step={2.5}
           quickSteps={[2.5, 5]}
           decimals
-          ghost={ghost ? `${ghost.weight} kg` : undefined}
-          onGhostFill={ghost ? () => setWeight(ghost.weight) : undefined}
+          ghost={lastHint ? `${lastHint.weight} kg` : undefined}
+          onGhostFill={lastHint ? () => setWeight(lastHint.weight) : undefined}
+          onInteract={onInteract}
         />
         <Stepper
           label="Reps"
@@ -101,8 +116,9 @@ export function SetEntry({
           step={1}
           quickSteps={[1, 2]}
           max={100}
-          ghost={ghost ? `${ghost.reps}` : undefined}
-          onGhostFill={ghost ? () => setReps(ghost.reps) : undefined}
+          ghost={lastHint ? `${lastHint.reps}` : undefined}
+          onGhostFill={lastHint ? () => setReps(lastHint.reps) : undefined}
+          onInteract={onInteract}
         />
       </div>
 

@@ -80,7 +80,7 @@ export function SetRow({
         </>
       ) : (
         <span className="flex flex-1 items-center justify-between gap-2">
-          <span className="text-[14px] text-fg-subtle">
+          <span className="min-w-0 truncate text-[14px] text-fg-subtle">
             {ghost ? `${ghost.weight} kg × ${ghost.reps}` : "Not logged yet"}
           </span>
           {isAmrapTarget && (

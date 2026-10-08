@@ -37,6 +37,16 @@ export function RestTimer({ duration, onDismiss, onExtend }: RestTimerProps) {
     return () => clearInterval(tick);
   }, [duration]);
 
+  const dismissRef = useRef(onDismiss);
+  dismissRef.current = onDismiss;
+
+  // Clear "Rest's up" after a short beat so it doesn't crowd the logger.
+  useEffect(() => {
+    if (remaining !== 0) return;
+    const t = window.setTimeout(() => dismissRef.current(), 3500);
+    return () => window.clearTimeout(t);
+  }, [remaining]);
+
   const done = remaining === 0;
   const progress = duration > 0 ? remaining / duration : 0;
   const circumference = 2 * Math.PI * 24;

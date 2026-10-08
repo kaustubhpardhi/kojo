@@ -18,6 +18,7 @@ import { SessionOverview } from "./SessionOverview";
 import { SetEntry } from "./SetEntry";
 import { SetRow } from "./SetRow";
 import { SwapSheet } from "./SwapSheet";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useLiveSession } from "@/hooks/useLiveSession";
 import { friendlyDate } from "@/lib/dates";
 import { deleteSession, getTemplate, updateTemplate, toPlan } from "@/lib/queries";
@@ -90,6 +91,7 @@ function Logger({
   const [celebrating, setCelebrating] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [prSets, setPrSets] = useState<Set<string>>(new Set());
+  const keyboardInset = useKeyboardInset();
 
   useEffect(() => {
     if (session?.completed_at) router.replace(`/history/${sessionId}`);
@@ -223,7 +225,7 @@ function Logger({
     ) === -1;
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-lg flex-col">
+    <div className="mx-auto flex min-h-dvh max-w-lg flex-col overflow-x-hidden">
       <header className="sticky top-0 z-20 bg-bg/95 px-4 pb-3 pt-safe backdrop-blur-xl">
         <div className="flex items-center gap-2 pt-2">
           <IconButton
@@ -327,39 +329,58 @@ function Logger({
               </div>
 
               <div className="space-y-2">
-                {Array.from({ length: current.target_sets }, (_, i) => i + 1).map((n) => (
-                  <SetRow
-                    key={n}
-                    setNumber={n}
-                    set={current.logged.get(n)}
-                    ghost={current.previousSets.find((s) => s.setNumber === n)}
-                    isAmrapTarget={current.amrap_last_set && n === current.target_sets}
-                    isPR={prSets.has(`${current.exercise_id}-${n}`)}
-                    onEdit={
-                      current.logged.has(n) ? () => setEditingSet(current.logged.get(n)) : undefined
+                {Array.from({ length: current.target_sets }, (_, i) => i + 1).map((n) => {
+                  // Prefer "same as last set this session" over per-set history ghosts.
+                  let preview: LoggedSet | undefined;
+                  if (!current.logged.has(n)) {
+                    for (let i = n - 1; i >= 1; i--) {
+                      const prev = current.logged.get(i);
+                      if (prev) {
+                        preview = prev;
+                        break;
+                      }
                     }
-                  />
-                ))}
-              </div>
-
-              <AnimatePresence>
-                {restFor !== null && (
-                  <div className="mt-3">
-                    <RestTimer
-                      duration={restFor}
-                      onDismiss={() => setRestFor(null)}
-                      onExtend={(extra) => setRestFor((r) => (r ?? 0) + extra)}
+                    preview ??= current.previousSets.find((s) => s.setNumber === n);
+                  }
+                  return (
+                    <SetRow
+                      key={n}
+                      setNumber={n}
+                      set={current.logged.get(n)}
+                      ghost={preview}
+                      isAmrapTarget={current.amrap_last_set && n === current.target_sets}
+                      isPR={prSets.has(`${current.exercise_id}-${n}`)}
+                      onEdit={
+                        current.logged.has(n) ? () => setEditingSet(current.logged.get(n)) : undefined
+                      }
                     />
-                  </div>
-                )}
-              </AnimatePresence>
+                  );
+                })}
+              </div>
             </motion.div>
           </AnimatePresence>
         </div>
       )}
 
       {current && (
-        <div className="sticky bottom-0 z-20 bg-gradient-to-t from-bg via-bg to-transparent px-4 pb-safe pt-4">
+        <div
+          className="sticky bottom-0 z-20 min-w-0 bg-gradient-to-t from-bg via-bg to-transparent px-4 pb-safe pt-4"
+          style={{
+            // Lift above the iOS keyboard (layout viewport doesn't shrink).
+            transform: keyboardInset > 0 ? `translateY(-${keyboardInset}px)` : undefined,
+          }}
+        >
+          <AnimatePresence>
+            {restFor !== null && (
+              <div className="mb-3">
+                <RestTimer
+                  duration={restFor}
+                  onDismiss={() => setRestFor(null)}
+                  onExtend={(extra) => setRestFor((r) => (r ?? 0) + extra)}
+                />
+              </div>
+            )}
+          </AnimatePresence>
           {editingSet || !exerciseDone ? (
             <SetEntry
               exercise={current}
@@ -371,6 +392,7 @@ function Logger({
               editing={editingSet}
               onLog={(set) => void handleLog(set)}
               onCancelEdit={() => setEditingSet(undefined)}
+              onInteract={() => setRestFor(null)}
             />
           ) : (
             <div className="rounded-[var(--radius-lg)] bg-surface p-4 shadow-soft">
