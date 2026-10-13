@@ -18,6 +18,7 @@ import { useAsync } from "@/hooks/useAsync";
 import { friendlyError } from "@/lib/errors";
 import { createTemplate, getTemplate, updateTemplate } from "@/lib/queries";
 import type { Exercise, ExercisePlan } from "@/lib/database.types";
+import { PLAN_FIELD_DEFAULTS } from "@/lib/programs/planDefaults";
 
 const EMOJIS = ["💪", "🦵", "🔱", "🏋️", "🔥", "⚡", "🧱", "🫀", "🥊", "🧘"];
 
@@ -63,6 +64,15 @@ export function TemplateBuilder({ templateId }: { templateId?: string }) {
         rest_seconds: e.rest_seconds,
         amrap_last_set: e.amrap_last_set,
         notes: e.notes,
+        ...PLAN_FIELD_DEFAULTS,
+        role: e.role ?? null,
+        slot_key: e.slot_key ?? null,
+        superset_group: e.superset_group ?? null,
+        superset_order: e.superset_order ?? null,
+        increment_kg: e.increment_kg ?? 2.5,
+        keep_weight: e.keep_weight ?? false,
+        unilateral: e.unilateral ?? false,
+        rir_label: e.rir_label ?? null,
       })),
     );
   }, [existing]);
@@ -82,6 +92,7 @@ export function TemplateBuilder({ templateId }: { templateId?: string }) {
         rest_seconds: 90,
         amrap_last_set: false,
         notes: null,
+        ...PLAN_FIELD_DEFAULTS,
       },
     ]);
   };
@@ -121,6 +132,14 @@ export function TemplateBuilder({ templateId }: { templateId?: string }) {
           rest_seconds: e.rest_seconds,
           amrap_last_set: e.amrap_last_set,
           notes: e.notes,
+          role: e.role ?? null,
+          slot_key: e.slot_key ?? null,
+          superset_group: e.superset_group ?? null,
+          superset_order: e.superset_order ?? null,
+          increment_kg: e.increment_kg ?? 2.5,
+          keep_weight: e.keep_weight ?? false,
+          unilateral: e.unilateral ?? false,
+          rir_label: e.rir_label ?? null,
         })),
       };
       if (templateId) {

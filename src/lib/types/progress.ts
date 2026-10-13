@@ -5,7 +5,8 @@ export type ProgressChipId =
   | "volume"
   | "consistency"
   | "amrap"
-  | "personal-bests";
+  | "personal-bests"
+  | "progression";
 
 export interface StrengthDataPoint {
   date: string;
@@ -88,6 +89,32 @@ export interface ProgressExercise {
   primaryMuscle: MuscleGroup | null;
   setCount: number;
   hasAmrap: boolean;
+}
+
+export interface ProgressionPoint {
+  date: string;
+  topWeight: number;
+  topReps: number;
+}
+
+export interface ProgressionRow {
+  exerciseId: string;
+  exerciseName: string;
+  primaryMuscle: MuscleGroup | null;
+  series: ProgressionPoint[];
+  readyToIncrease: boolean;
+  cue: string;
+  nextWeight: number | null;
+  nextReps: number | null;
+}
+
+export interface ProgressionViewData {
+  rows: ProgressionRow[];
+}
+
+export interface HardSetsByMuscle {
+  muscle: MuscleGroup;
+  hardSets: number;
 }
 
 export interface ProgressDataResult<T> {

@@ -23,7 +23,8 @@ import { useLiveSession } from "@/hooks/useLiveSession";
 import { friendlyDate } from "@/lib/dates";
 import { deleteSession, getTemplate, updateTemplate, toPlan } from "@/lib/queries";
 import { spring } from "@/lib/motion";
-import type { Exercise, LoggedSet } from "@/lib/database.types";
+import { suggestedWarmups } from "@/lib/programs/progression";
+import { WARMUP_SET_BASE, type Exercise, type LoggedSet } from "@/lib/database.types";
 
 const ENCOURAGEMENT = [
   "Nice. Set {n} down.",
@@ -91,7 +92,24 @@ function Logger({
   const [celebrating, setCelebrating] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [prSets, setPrSets] = useState<Set<string>>(new Set());
+  const [timeCapNudged, setTimeCapNudged] = useState(false);
   const keyboardInset = useKeyboardInset();
+
+  useEffect(() => {
+    if (!session?.started_at || timeCapNudged) return;
+    const started = new Date(session.started_at).getTime();
+    const tick = window.setInterval(() => {
+      const mins = (Date.now() - started) / 60_000;
+      if (mins >= 55) {
+        setTimeCapNudged(true);
+        toast({
+          message: "~55 min — cut the last superset to 2 rounds. Never skip the main lift.",
+          icon: "clock",
+        });
+      }
+    }, 30_000);
+    return () => window.clearInterval(tick);
+  }, [session?.started_at, timeCapNudged, toast]);
 
   useEffect(() => {
     if (session?.completed_at) router.replace(`/history/${sessionId}`);
@@ -147,7 +165,15 @@ function Logger({
     }
 
     const setsDone = current.logged.size + (current.logged.has(set.setNumber) ? 0 : 1);
-    if (!wasEditing && setsDone < current.target_sets && current.rest_seconds > 0) {
+    // Supersets: rest starts after the B movement (superset_order === 1).
+    const isSupersetA =
+      current.superset_group != null && current.superset_order === 0;
+    if (
+      !wasEditing &&
+      setsDone < current.target_sets &&
+      current.rest_seconds > 0 &&
+      !isSupersetA
+    ) {
       setRestFor(current.rest_seconds);
     }
   };
@@ -218,7 +244,38 @@ function Logger({
     return current.target_sets + 1;
   })();
 
-  const exerciseDone = current ? current.logged.size >= current.target_sets : false;
+  const workingLoggedCount = current
+    ? [...current.logged.values()].filter((s) => (s.setType ?? "working") !== "warmup").length
+    : 0;
+  const exerciseDone = current ? workingLoggedCount >= current.target_sets : false;
+  const warmupSets = current
+    ? [...current.logged.entries()]
+        .filter(([, s]) => (s.setType ?? "working") === "warmup")
+        .sort(([a], [b]) => a - b)
+    : [];
+  const canOfferWarmups =
+    Boolean(current) &&
+    current!.role === "main" &&
+    current!.target_weight != null &&
+    current!.target_weight > 0 &&
+    warmupSets.length === 0 &&
+    workingLoggedCount === 0;
+
+  const addWarmups = async () => {
+    if (!current?.target_weight) return;
+    const plans = suggestedWarmups(Number(current.target_weight));
+    for (let i = 0; i < plans.length; i++) {
+      const w = plans[i];
+      await recordSet({
+        setNumber: WARMUP_SET_BASE + i,
+        weight: w.weight,
+        reps: w.reps,
+        isAmrap: false,
+        setType: "warmup",
+      });
+    }
+    toast({ message: "Warm-up sets added", icon: "check" });
+  };
   const isLastExercise =
     exercises.findIndex(
       (e, i) => i > index && e.status === "pending" && e.logged.size < e.target_sets,
@@ -299,6 +356,65 @@ function Logger({
                 <h1 className="mt-1 font-display text-[30px] font-extrabold leading-[1.1] tracking-[-0.02em]">
                   {current.exercise.name}
                 </h1>
+                {(current.target_weight != null ||
+                  current.rep_range_low != null ||
+                  current.rir_label ||
+                  current.failure_last_set ||
+                  current.superset_group ||
+                  current.unilateral ||
+                  session.program_week_number === 4) && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {current.target_weight != null &&
+                      current.rep_range_low != null &&
+                      current.rep_range_high != null && (
+                        <span className="rounded-full bg-accent-soft px-2.5 py-1 text-[12px] font-semibold text-accent-fg">
+                          target {current.target_weight} kg × {current.rep_range_low}
+                          {current.rep_range_low !== current.rep_range_high
+                            ? `–${current.rep_range_high}`
+                            : ""}
+                        </span>
+                      )}
+                    {current.previousSets.length > 0 && (
+                      <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-fg-muted">
+                        last{" "}
+                        {current.previousSets
+                          .map((s) => `${s.weight}×${s.reps}`)
+                          .slice(0, 4)
+                          .join(" · ")}
+                      </span>
+                    )}
+                    {current.rir_label && (
+                      <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-semibold text-fg-muted">
+                        RIR {current.rir_label}
+                      </span>
+                    )}
+                    {current.failure_last_set && (
+                      <span className="rounded-full bg-pop/20 px-2.5 py-1 text-[12px] font-bold uppercase tracking-wide text-pop">
+                        last set to failure
+                      </span>
+                    )}
+                    {current.superset_group && (
+                      <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-semibold text-fg-muted">
+                        SS {current.superset_group}
+                        {current.superset_order === 0
+                          ? "A"
+                          : current.superset_order === 1
+                            ? "B"
+                            : ""}
+                      </span>
+                    )}
+                    {current.unilateral && (
+                      <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-fg-muted">
+                        per leg
+                      </span>
+                    )}
+                    {session.program_week_number === 4 && (
+                      <span className="rounded-full bg-pop/20 px-2.5 py-1 text-[12px] font-bold uppercase tracking-wide text-pop">
+                        Deload week
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {current.swapped_from_exercise_id && (
                     <span className="flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-fg-muted">
@@ -328,6 +444,33 @@ function Logger({
                 )}
               </div>
 
+              {canOfferWarmups && (
+                <button
+                  type="button"
+                  onClick={() => void addWarmups()}
+                  className="mb-3 flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-line text-[14px] font-semibold text-fg-muted active:scale-[0.99]"
+                >
+                  <Icon name="flame" size={16} />
+                  Add ramp-up sets (~50% / 70% / 85%)
+                </button>
+              )}
+
+              {warmupSets.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  <p className="text-[12px] font-semibold uppercase tracking-wide text-fg-subtle">
+                    Warm-up
+                  </p>
+                  {warmupSets.map(([n, set]) => (
+                    <SetRow
+                      key={n}
+                      setNumber={n - WARMUP_SET_BASE + 1}
+                      set={set}
+                      isAmrapTarget={false}
+                    />
+                  ))}
+                </div>
+              )}
+
               <div className="space-y-2">
                 {Array.from({ length: current.target_sets }, (_, i) => i + 1).map((n) => {
                   // Prefer "same as last set this session" over per-set history ghosts.
@@ -335,12 +478,20 @@ function Logger({
                   if (!current.logged.has(n)) {
                     for (let i = n - 1; i >= 1; i--) {
                       const prev = current.logged.get(i);
-                      if (prev) {
+                      if (prev && (prev.setType ?? "working") !== "warmup") {
                         preview = prev;
                         break;
                       }
                     }
                     preview ??= current.previousSets.find((s) => s.setNumber === n);
+                    if (!preview && current.target_weight != null) {
+                      preview = {
+                        setNumber: n,
+                        weight: Number(current.target_weight),
+                        reps: current.rep_range_low ?? 0,
+                        isAmrap: false,
+                      };
+                    }
                   }
                   return (
                     <SetRow

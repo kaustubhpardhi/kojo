@@ -34,10 +34,15 @@ const PersonalBestsView = dynamic(
   () => import("./views/PersonalBestsView").then((m) => m.PersonalBestsView),
   { loading: () => <SkeletonList rows={3} />, ssr: false },
 );
+const ProgressionView = dynamic(
+  () => import("./views/ProgressionView").then((m) => m.ProgressionView),
+  { loading: () => <SkeletonList rows={3} />, ssr: false },
+);
 
 const CHIPS: { id: ProgressChipId; label: string }[] = [
   { id: "strength", label: "Strength" },
   { id: "volume", label: "Volume" },
+  { id: "progression", label: "Progression" },
   { id: "consistency", label: "Consistency" },
   { id: "amrap", label: "AMRAP" },
   { id: "personal-bests", label: "Personal bests" },
@@ -89,6 +94,7 @@ export function ProgressContent() {
         <div className="px-4 pb-4">
           {chip === "strength" && <StrengthView userId={userId} exercises={exercises} />}
           {chip === "volume" && <VolumeView userId={userId} exercises={exercises} />}
+          {chip === "progression" && <ProgressionView userId={userId} />}
           {chip === "consistency" && <ConsistencyView userId={userId} />}
           {chip === "amrap" && <AmrapView userId={userId} exercises={exercises} />}
           {chip === "personal-bests" && <PersonalBestsView userId={userId} />}

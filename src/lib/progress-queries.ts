@@ -14,13 +14,16 @@ import type {
   AmrapViewData,
   ConsistencyCell,
   ConsistencyViewData,
+  HardSetsByMuscle,
   PersonalBestRow,
   PersonalBestsViewData,
   ProgressExercise,
+  ProgressionViewData,
   StrengthViewData,
   VolumeDataPoint,
   VolumeViewData,
 } from "./types/progress";
+import { decideProgression } from "./programs/progression";
 
 const epley = (weight: number, reps: number) => weight * (1 + reps / 30);
 const CHUNK = 150;
@@ -75,7 +78,7 @@ async function loadHistory(userId: string): Promise<HistoryCache> {
     const ids = sessions.slice(i, i + CHUNK).map((s) => s.id);
     const { data, error } = await supabase
       .from("set_logs")
-      .select("session_id, exercise_id, set_number, weight, reps, is_amrap")
+      .select("session_id, exercise_id, set_number, weight, reps, is_amrap, set_type")
       .in("session_id", ids);
     if (error) throw error;
     for (const row of (data ?? []) as {
@@ -85,7 +88,10 @@ async function loadHistory(userId: string): Promise<HistoryCache> {
       weight: number | string;
       reps: number | string;
       is_amrap: boolean;
+      set_type?: string | null;
     }[]) {
+      // Warm-ups never count toward volume or PRs.
+      if ((row.set_type ?? "working") === "warmup") continue;
       const date = dateById.get(row.session_id);
       if (!date) continue;
       logs.push({
@@ -138,6 +144,83 @@ export async function getProgressExercises(userId: string): Promise<ProgressExer
       };
     })
     .sort((a, b) => b.setCount - a.setCount || a.name.localeCompare(b.name));
+}
+
+/** Top working weight + reps over time, with a ready-to-increase badge. */
+export async function getProgressionData(userId: string): Promise<ProgressionViewData> {
+  const { logs, exercises } = await getHistory(userId);
+  const byEx = new Map<string, LogRow[]>();
+  for (const log of logs) {
+    const list = byEx.get(log.exercise_id) ?? [];
+    list.push(log);
+    byEx.set(log.exercise_id, list);
+  }
+
+  const rows = [...byEx.entries()]
+    .map(([id, exLogs]) => {
+      const ex = exercises.get(id);
+      const byDate = new Map<string, { topWeight: number; topReps: number }>();
+      for (const log of exLogs) {
+        const cur = byDate.get(log.date);
+        if (!cur || log.weight > cur.topWeight) {
+          byDate.set(log.date, { topWeight: log.weight, topReps: log.reps });
+        } else if (log.weight === cur.topWeight) {
+          cur.topReps = Math.max(cur.topReps, log.reps);
+        }
+      }
+      const series = [...byDate.entries()]
+        .map(([date, v]) => ({ date, topWeight: v.topWeight, topReps: v.topReps }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      const lastDate = series[series.length - 1]?.date;
+      const lastSets = lastDate
+        ? exLogs
+            .filter((l) => l.date === lastDate)
+            .map((l) => ({ weight: l.weight, reps: l.reps, setType: "working" as const }))
+        : [];
+
+      // Default accessory-ish range when we don't know the program slot.
+      const repMin = 6;
+      const repMax = 12;
+      const decision = decideProgression({
+        lastSessionSets: lastSets,
+        repMin,
+        repMax,
+        incrementKg: 2.5,
+        isDeload: false,
+      });
+
+      return {
+        exerciseId: id,
+        exerciseName: ex?.name ?? "Unknown",
+        primaryMuscle: ex?.primary_muscle ?? null,
+        series,
+        readyToIncrease: decision.kind === "increase_load",
+        cue: decision.cue,
+        nextWeight: "targetWeight" in decision ? decision.targetWeight : null,
+        nextReps: "targetReps" in decision ? decision.targetReps : null,
+      };
+    })
+    .filter((r) => r.series.length > 0)
+    .sort((a, b) => Number(b.readyToIncrease) - Number(a.readyToIncrease) || a.exerciseName.localeCompare(b.exerciseName));
+
+  return { rows };
+}
+
+/** Working sets this calendar week, grouped by primary muscle. */
+export async function getHardSetsThisWeek(userId: string): Promise<HardSetsByMuscle[]> {
+  const { logs, exercises } = await getHistory(userId);
+  const start = weekStart(todayStr());
+  const counts = new Map<MuscleGroup, number>();
+  for (const log of logs) {
+    if (log.date < start) continue;
+    const muscle = exercises.get(log.exercise_id)?.primary_muscle;
+    if (!muscle) continue;
+    counts.set(muscle, (counts.get(muscle) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([muscle, hardSets]) => ({ muscle, hardSets }))
+    .sort((a, b) => b.hardSets - a.hardSets);
 }
 
 // ─── 1. Strength ──────────────────────────────────────────────────────────

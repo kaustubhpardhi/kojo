@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { todayStr } from "@/lib/dates";
 import { haptic } from "@/lib/haptics";
 import { queueSession } from "@/lib/offline";
-import { buildSessionSeed, insertSessionSeed, pruneEmptySessions } from "@/lib/queries";
+import {
+  buildProgramDaySeed,
+  buildSessionSeed,
+  insertSessionSeed,
+  pruneEmptySessions,
+} from "@/lib/queries";
 import { useToast } from "@/components/ui/Toast";
 
 /** Clamp to today or earlier — future sessions aren't allowed. */
@@ -53,5 +58,36 @@ export function useStartWorkout(userId: string) {
     [router, starting, toast, userId],
   );
 
-  return { start, starting };
+  const startProgramDay = useCallback(
+    async (runId: string, dayNumber: number, date = todayStr()) => {
+      if (starting) return;
+      setStarting(true);
+      try {
+        if (typeof navigator === "undefined" || navigator.onLine) {
+          await pruneEmptySessions(userId).catch(() => {});
+        }
+        const seed = await buildProgramDaySeed(
+          userId,
+          runId,
+          dayNumber,
+          resolveSessionDate(date),
+        );
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          await queueSession(seed);
+        } else {
+          await insertSessionSeed(seed);
+        }
+        haptic("success");
+        router.push(`/log/${seed.id}`);
+      } catch (err) {
+        console.error("Failed to start program day", err);
+        toast({ message: "Couldn't start that day", icon: "x", tone: "danger" });
+      } finally {
+        setStarting(false);
+      }
+    },
+    [router, starting, toast, userId],
+  );
+
+  return { start, startProgramDay, starting };
 }

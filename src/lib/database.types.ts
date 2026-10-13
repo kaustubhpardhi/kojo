@@ -3,6 +3,10 @@ export type DayType = "A" | "B" | "C";
 
 export type ExerciseSource = "seed" | "wger" | "custom";
 export type SessionExerciseStatus = "pending" | "done" | "skipped";
+export type ExerciseRole = "main" | "accessory";
+export type SetType = "warmup" | "working" | "failure";
+export type ProgramRunStatus = "active" | "completed" | "abandoned";
+export type InclineVariant = "barbell" | "dumbbell";
 
 export const MUSCLE_GROUPS = [
   "chest",
@@ -66,6 +70,8 @@ export interface Template {
   is_starter: boolean;
   is_archived: boolean;
   source_template_id: string | null;
+  program_id: string | null;
+  is_superseded: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -81,6 +87,14 @@ export interface ExercisePlan {
   rest_seconds: number;
   amrap_last_set: boolean;
   notes: string | null;
+  role: ExerciseRole | null;
+  slot_key: string | null;
+  superset_group: string | null;
+  superset_order: number | null;
+  increment_kg: number;
+  keep_weight: boolean;
+  unilateral: boolean;
+  rir_label: string | null;
 }
 
 export interface TemplateExercise extends ExercisePlan {
@@ -96,6 +110,8 @@ export interface SessionExercise extends ExercisePlan {
   session_id: string;
   status: SessionExerciseStatus;
   swapped_from_exercise_id: string | null;
+  program_slot_id: string | null;
+  failure_last_set: boolean;
   created_at: string;
 }
 
@@ -112,6 +128,9 @@ export interface Session {
   updated_at: string;
   /** Legacy. Null for every session created by the new app. */
   day: DayType | null;
+  program_run_id: string | null;
+  program_week_number: number | null;
+  program_day_number: number | null;
 }
 
 export interface SetLog {
@@ -123,9 +142,102 @@ export interface SetLog {
   weight: number;
   reps: number;
   is_amrap: boolean;
+  set_type: SetType;
   logged_at: string;
   /** Legacy display-name override; superseded by swapped_from_exercise_id. */
   override_exercise_name: string | null;
+}
+
+export interface Program {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  week_count: number;
+  is_starter: boolean;
+  is_archived: boolean;
+  superseded_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgramWeek {
+  id: string;
+  program_id: string;
+  week_number: number;
+  is_deload: boolean;
+  main_rir_label: string;
+  accessory_to_failure_last: boolean;
+  accessory_set_delta: number;
+  notes: string | null;
+}
+
+export interface ProgramDay {
+  id: string;
+  program_id: string;
+  day_number: number;
+  name: string;
+  short_label: string;
+  emoji: string | null;
+  estimated_minutes: number | null;
+  template_id: string | null;
+}
+
+export interface ProgramSlot {
+  id: string;
+  program_day_id: string;
+  position: number;
+  slot_key: string;
+  role: ExerciseRole;
+  main_lift_key: string | null;
+  superset_group: string | null;
+  superset_order: number | null;
+  target_sets: number;
+  rep_min: number;
+  rep_max: number;
+  rest_seconds: number;
+  increment_kg: number;
+  keep_weight: boolean;
+  unilateral: boolean;
+  notes: string | null;
+}
+
+export interface ProgramSlotExercise {
+  slot_id: string;
+  exercise_id: string;
+  is_default: boolean;
+  position: number;
+}
+
+export interface ProgramSlotWeekOverride {
+  slot_id: string;
+  week_number: number;
+  target_sets: number;
+  rep_min: number | null;
+  rep_max: number | null;
+}
+
+export interface ProgramRun {
+  id: string;
+  user_id: string;
+  program_id: string;
+  block_number: number;
+  start_date: string;
+  current_week: number;
+  status: ProgramRunStatus;
+  incline_variant: InclineVariant;
+  source_run_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgramRunDay {
+  id: string;
+  run_id: string;
+  week_number: number;
+  day_number: number;
+  session_id: string | null;
+  completed_at: string | null;
 }
 
 export interface ExerciseFavorite {
@@ -153,7 +265,11 @@ export interface LoggedSet {
   weight: number;
   reps: number;
   isAmrap: boolean;
+  setType?: SetType;
 }
+
+/** Working sets use 1..N; warm-ups are stored at 901+ so they never collide. */
+export const WARMUP_SET_BASE = 901;
 
 export interface LiveExercise extends SessionExercise {
   exercise: Exercise;
@@ -228,6 +344,8 @@ export interface Database {
           | "is_starter"
           | "is_archived"
           | "source_template_id"
+          | "program_id"
+          | "is_superseded"
         >;
         Update: Partial<Omit<Template, "id">>;
       };
@@ -245,6 +363,14 @@ export interface Database {
           | "rest_seconds"
           | "amrap_last_set"
           | "notes"
+          | "role"
+          | "slot_key"
+          | "superset_group"
+          | "superset_order"
+          | "increment_kg"
+          | "keep_weight"
+          | "unilateral"
+          | "rir_label"
         >;
         Update: Partial<Omit<TemplateExercise, "id">>;
       };
@@ -260,6 +386,9 @@ export interface Database {
           | "started_at"
           | "completed_at"
           | "day"
+          | "program_run_id"
+          | "program_week_number"
+          | "program_day_number"
         >;
         Update: Partial<Omit<Session, "id">>;
       };
@@ -279,6 +408,16 @@ export interface Database {
           | "notes"
           | "status"
           | "swapped_from_exercise_id"
+          | "role"
+          | "slot_key"
+          | "superset_group"
+          | "superset_order"
+          | "increment_kg"
+          | "keep_weight"
+          | "unilateral"
+          | "rir_label"
+          | "program_slot_id"
+          | "failure_last_set"
         >;
         Update: Partial<Omit<SessionExercise, "id">>;
       };
@@ -287,9 +426,75 @@ export interface Database {
         Insert: Insertable<
           SetLog,
           "logged_at",
-          "id" | "session_exercise_id" | "is_amrap" | "override_exercise_name"
+          | "id"
+          | "session_exercise_id"
+          | "is_amrap"
+          | "override_exercise_name"
+          | "set_type"
         >;
         Update: Partial<Omit<SetLog, "id">>;
+      };
+      programs: {
+        Row: Program;
+        Insert: Insertable<
+          Program,
+          "created_at" | "updated_at",
+          "id" | "description" | "week_count" | "is_starter" | "is_archived" | "superseded_by"
+        >;
+        Update: Partial<Omit<Program, "id">>;
+      };
+      program_weeks: {
+        Row: ProgramWeek;
+        Insert: Insertable<ProgramWeek, "id", "notes">;
+        Update: Partial<Omit<ProgramWeek, "id">>;
+      };
+      program_days: {
+        Row: ProgramDay;
+        Insert: Insertable<
+          ProgramDay,
+          "id",
+          "emoji" | "estimated_minutes" | "template_id"
+        >;
+        Update: Partial<Omit<ProgramDay, "id">>;
+      };
+      program_slots: {
+        Row: ProgramSlot;
+        Insert: Insertable<
+          ProgramSlot,
+          "id",
+          | "main_lift_key"
+          | "superset_group"
+          | "superset_order"
+          | "increment_kg"
+          | "keep_weight"
+          | "unilateral"
+          | "notes"
+        >;
+        Update: Partial<Omit<ProgramSlot, "id">>;
+      };
+      program_slot_exercises: {
+        Row: ProgramSlotExercise;
+        Insert: Insertable<ProgramSlotExercise, never, "is_default" | "position">;
+        Update: Partial<ProgramSlotExercise>;
+      };
+      program_slot_week_overrides: {
+        Row: ProgramSlotWeekOverride;
+        Insert: Insertable<ProgramSlotWeekOverride, never, "rep_min" | "rep_max">;
+        Update: Partial<ProgramSlotWeekOverride>;
+      };
+      program_runs: {
+        Row: ProgramRun;
+        Insert: Insertable<
+          ProgramRun,
+          "created_at" | "updated_at",
+          "id" | "block_number" | "current_week" | "status" | "incline_variant" | "source_run_id"
+        >;
+        Update: Partial<Omit<ProgramRun, "id">>;
+      };
+      program_run_days: {
+        Row: ProgramRunDay;
+        Insert: Insertable<ProgramRunDay, "id", "session_id" | "completed_at">;
+        Update: Partial<Omit<ProgramRunDay, "id">>;
       };
       exercise_favorites: {
         Row: ExerciseFavorite;

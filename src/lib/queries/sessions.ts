@@ -20,12 +20,15 @@ export function newId(): string {
   return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
 }
 
-function toLoggedSet(log: Pick<SetLog, "set_number" | "weight" | "reps" | "is_amrap">): LoggedSet {
+function toLoggedSet(
+  log: Pick<SetLog, "set_number" | "weight" | "reps" | "is_amrap" | "set_type">,
+): LoggedSet {
   return {
     setNumber: log.set_number,
     weight: Number(log.weight),
     reps: Number(log.reps),
     isAmrap: !!log.is_amrap,
+    setType: (log.set_type as LoggedSet["setType"]) ?? "working",
   };
 }
 
@@ -37,7 +40,14 @@ export interface SessionSeed {
   date: string;
   templateId: string | null;
   title: string | null;
-  exercises: (ExercisePlan & { id: string })[];
+  exercises: (ExercisePlan & {
+    id: string;
+    program_slot_id?: string | null;
+    failure_last_set?: boolean;
+  })[];
+  programRunId?: string | null;
+  programWeekNumber?: number | null;
+  programDayNumber?: number | null;
 }
 
 /**
@@ -74,6 +84,14 @@ export async function buildSessionSeed(
       rest_seconds: e.rest_seconds,
       amrap_last_set: e.amrap_last_set,
       notes: e.notes,
+      role: e.role ?? null,
+      slot_key: e.slot_key ?? null,
+      superset_group: e.superset_group ?? null,
+      superset_order: e.superset_order ?? null,
+      increment_kg: e.increment_kg ?? 2.5,
+      keep_weight: e.keep_weight ?? false,
+      unilateral: e.unilateral ?? false,
+      rir_label: e.rir_label ?? null,
     })),
   };
 }
@@ -86,6 +104,9 @@ export async function insertSessionSeed(seed: SessionSeed): Promise<void> {
     template_id: seed.templateId,
     title: seed.title,
     started_at: new Date().toISOString(),
+    program_run_id: seed.programRunId ?? null,
+    program_week_number: seed.programWeekNumber ?? null,
+    program_day_number: seed.programDayNumber ?? null,
   } as never);
   if (error && error.code !== "23505") throw error;
 
@@ -103,6 +124,16 @@ export async function insertSessionSeed(seed: SessionSeed): Promise<void> {
     rest_seconds: e.rest_seconds,
     amrap_last_set: e.amrap_last_set,
     notes: e.notes,
+    role: e.role ?? null,
+    slot_key: e.slot_key ?? null,
+    superset_group: e.superset_group ?? null,
+    superset_order: e.superset_order ?? null,
+    increment_kg: e.increment_kg ?? 2.5,
+    keep_weight: e.keep_weight ?? false,
+    unilateral: e.unilateral ?? false,
+    rir_label: e.rir_label ?? null,
+    program_slot_id: e.program_slot_id ?? null,
+    failure_last_set: e.failure_last_set ?? false,
   }));
   const { error: exError } = await supabase
     .from("session_exercises")
@@ -112,11 +143,33 @@ export async function insertSessionSeed(seed: SessionSeed): Promise<void> {
 
 export async function completeSession(sessionId: string): Promise<void> {
   const now = new Date().toISOString();
-  const { error } = await supabase
+  const { data: row, error } = await supabase
     .from("sessions")
     .update({ completed_at: now, updated_at: now } as never)
-    .eq("id", sessionId);
+    .eq("id", sessionId)
+    .select("program_run_id, program_week_number, program_day_number")
+    .single();
   if (error) throw error;
+
+  const meta = row as {
+    program_run_id: string | null;
+    program_week_number: number | null;
+    program_day_number: number | null;
+  } | null;
+
+  if (
+    meta?.program_run_id &&
+    meta.program_week_number != null &&
+    meta.program_day_number != null
+  ) {
+    const { markProgramDayComplete } = await import("./programs");
+    await markProgramDayComplete(
+      meta.program_run_id,
+      meta.program_week_number,
+      meta.program_day_number,
+      sessionId,
+    ).catch((err) => console.error("Failed to mark program day", err));
+  }
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {
@@ -144,6 +197,15 @@ export async function addSessionExercise(
       rep_range_high: plan?.rep_range_high ?? 12,
       target_weight: plan?.target_weight ?? null,
       rest_seconds: plan?.rest_seconds ?? 90,
+      role: plan?.role ?? null,
+      slot_key: plan?.slot_key ?? null,
+      superset_group: plan?.superset_group ?? null,
+      superset_order: plan?.superset_order ?? null,
+      increment_kg: plan?.increment_kg ?? 2.5,
+      keep_weight: plan?.keep_weight ?? false,
+      unilateral: plan?.unilateral ?? false,
+      rir_label: plan?.rir_label ?? null,
+      failure_last_set: false,
       amrap_last_set: plan?.amrap_last_set ?? false,
       notes: plan?.notes ?? null,
     } as never)
@@ -222,6 +284,7 @@ export interface SetLogInput {
   weight: number;
   reps: number;
   isAmrap: boolean;
+  setType?: import("../database.types").SetType;
 }
 
 /**
@@ -239,6 +302,7 @@ export async function logSet(input: SetLogInput): Promise<void> {
     weight: input.weight,
     reps: input.reps,
     is_amrap: input.isAmrap,
+    set_type: input.setType ?? "working",
     logged_at: new Date().toISOString(),
   };
 
@@ -371,7 +435,9 @@ export async function getExerciseHistory(
 
   const { data, error } = await supabase
     .from("set_logs")
-    .select("exercise_id, session_id, set_number, weight, reps, is_amrap, sessions!inner(date, user_id)")
+    .select(
+      "exercise_id, session_id, set_number, weight, reps, is_amrap, set_type, sessions!inner(date, user_id)",
+    )
     .in("exercise_id", exerciseIds)
     .eq("sessions.user_id", userId)
     .order("logged_at", { ascending: false })
@@ -380,7 +446,7 @@ export async function getExerciseHistory(
 
   type Row = SetLog & { sessions: { date: string } | null };
   const rows = ((data ?? []) as unknown as Row[]).filter(
-    (r) => r.session_id !== excludeSessionId,
+    (r) => r.session_id !== excludeSessionId && (r.set_type ?? "working") !== "warmup",
   );
 
   const latestSessionByExercise = new Map<string, { sessionId: string; date: string }>();

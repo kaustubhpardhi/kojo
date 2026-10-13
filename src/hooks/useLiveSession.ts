@@ -85,8 +85,11 @@ export function useLiveSession(userId: string, sessionId: string) {
     for (const e of exercises) {
       if (e.status === "skipped") continue;
       target += e.target_sets;
-      logged += e.logged.size;
-      for (const s of e.logged.values()) volume += s.weight * s.reps;
+      for (const s of e.logged.values()) {
+        if ((s.setType ?? "working") === "warmup") continue;
+        logged += 1;
+        volume += s.weight * s.reps;
+      }
     }
     return { logged, target, volume };
   }, [exercises]);
@@ -119,6 +122,7 @@ export function useLiveSession(userId: string, sessionId: string) {
         weight: set.weight,
         reps: set.reps,
         isAmrap: set.isAmrap,
+        setType: set.setType ?? ("working" as const),
       };
 
       try {

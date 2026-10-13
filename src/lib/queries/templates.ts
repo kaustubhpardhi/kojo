@@ -63,9 +63,9 @@ export async function getTemplates(userId: string): Promise<TemplateSummary[]> {
     if (!lastByTemplate.has(s.template_id)) lastByTemplate.set(s.template_id, s.date);
   }
 
-  return ((templatesRes.data ?? []) as TemplateRowWithExercises[]).map((row) =>
-    toSummary(row, lastByTemplate.get(row.id) ?? null),
-  );
+  return ((templatesRes.data ?? []) as TemplateRowWithExercises[])
+    .filter((row) => !row.is_superseded)
+    .map((row) => toSummary(row, lastByTemplate.get(row.id) ?? null));
 }
 
 export async function getStarterTemplates(): Promise<TemplateSummary[]> {
@@ -75,7 +75,9 @@ export async function getStarterTemplates(): Promise<TemplateSummary[]> {
     .eq("is_starter", true)
     .order("position");
   if (error) throw error;
-  return ((data ?? []) as TemplateRowWithExercises[]).map((row) => toSummary(row, null));
+  return ((data ?? []) as TemplateRowWithExercises[])
+    .filter((row) => !row.is_superseded)
+    .map((row) => toSummary(row, null));
 }
 
 export async function getTemplate(templateId: string): Promise<TemplateWithExercises | null> {
@@ -169,6 +171,14 @@ async function replaceTemplateExercises(
     rest_seconds: e.rest_seconds,
     amrap_last_set: e.amrap_last_set,
     notes: e.notes,
+    role: e.role ?? null,
+    slot_key: e.slot_key ?? null,
+    superset_group: e.superset_group ?? null,
+    superset_order: e.superset_order ?? null,
+    increment_kg: e.increment_kg ?? 2.5,
+    keep_weight: e.keep_weight ?? false,
+    unilateral: e.unilateral ?? false,
+    rir_label: e.rir_label ?? null,
   }));
 
   const { error } = await supabase.from("template_exercises").insert(rows as never);
@@ -212,6 +222,14 @@ export function toPlan(row: TemplateExercise | (ExercisePlan & { id?: string }))
     rest_seconds: row.rest_seconds,
     amrap_last_set: row.amrap_last_set,
     notes: row.notes,
+    role: row.role ?? null,
+    slot_key: row.slot_key ?? null,
+    superset_group: row.superset_group ?? null,
+    superset_order: row.superset_order ?? null,
+    increment_kg: row.increment_kg ?? 2.5,
+    keep_weight: row.keep_weight ?? false,
+    unilateral: row.unilateral ?? false,
+    rir_label: row.rir_label ?? null,
   };
 }
 
