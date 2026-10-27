@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Reorder } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import { PageHeader } from "@/components/PageHeader";
 import { TemplateCard } from "@/components/TemplateCard";
@@ -18,7 +17,6 @@ import {
   duplicateTemplate,
   getStarterTemplates,
   getTemplates,
-  reorderTemplates,
   setTemplateArchived,
 } from "@/lib/queries";
 import type { TemplateSummary } from "@/lib/database.types";
@@ -35,27 +33,15 @@ export function WorkoutsContent() {
     () => getTemplates(userId),
     [userId],
   );
-  const [order, setOrder] = useState<TemplateSummary[] | null>(null);
   const [menuFor, setMenuFor] = useState<TemplateSummary | null>(null);
   const [starterOpen, setStarterOpen] = useState(false);
 
-  const list = order ?? templates ?? [];
-
-  const commitOrder = async (next: TemplateSummary[]) => {
-    setOrder(next);
-    try {
-      await reorderTemplates(next.map((t) => t.id));
-    } catch {
-      toast({ message: "Couldn't save the new order", icon: "x", tone: "danger" });
-      reload();
-    }
-  };
+  const list = templates ?? [];
 
   const handleDuplicate = async (template: TemplateSummary) => {
     setMenuFor(null);
     try {
       await duplicateTemplate(userId, template.id);
-      setOrder(null);
       reload();
       toast({ message: `Duplicated ${template.name}`, icon: "copy", tone: "success" });
     } catch {
@@ -67,7 +53,6 @@ export function WorkoutsContent() {
     setMenuFor(null);
     try {
       await setTemplateArchived(template.id, true);
-      setOrder(null);
       reload();
       toast({ message: `${template.name} archived`, icon: "archive" });
     } catch {
@@ -79,7 +64,6 @@ export function WorkoutsContent() {
     setMenuFor(null);
     try {
       await deleteTemplate(template.id);
-      setOrder(null);
       reload();
       toast({ message: `${template.name} deleted · history kept`, icon: "trash" });
     } catch {
@@ -91,7 +75,7 @@ export function WorkoutsContent() {
     <div className="px-4 pt-safe">
       <PageHeader
         title="Workouts"
-        subtitle="Your templates. Drag to reorder."
+        subtitle="Your workout templates."
         action={
           <Button size="sm" icon="plus" onClick={() => router.push("/workouts/new")}>
             New
@@ -120,17 +104,16 @@ export function WorkoutsContent() {
       )}
 
       {list.length > 0 && (
-        <Reorder.Group axis="y" values={list} onReorder={commitOrder} className="space-y-2.5">
+        <div className="space-y-2.5">
           {list.map((template) => (
-            <Reorder.Item key={template.id} value={template} className="touch-pan-y">
-              <TemplateCard
-                template={template}
-                onPress={() => router.push(`/workouts/${template.id}`)}
-                onMore={() => setMenuFor(template)}
-              />
-            </Reorder.Item>
+            <TemplateCard
+              key={template.id}
+              template={template}
+              onPress={() => router.push(`/workouts/${template.id}`)}
+              onMore={() => setMenuFor(template)}
+            />
           ))}
-        </Reorder.Group>
+        </div>
       )}
 
       {list.length > 0 && (
@@ -187,7 +170,6 @@ export function WorkoutsContent() {
         onClose={() => setStarterOpen(false)}
         userId={userId}
         onImported={() => {
-          setOrder(null);
           reload();
         }}
       />
