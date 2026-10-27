@@ -92,6 +92,7 @@ function Logger({
   const [celebrating, setCelebrating] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [prSets, setPrSets] = useState<Set<string>>(new Set());
+  const [discarding, setDiscarding] = useState(false);
   const keyboardInset = useKeyboardInset();
 
   useEffect(() => {
@@ -130,6 +131,7 @@ function Logger({
 
   const activeExercises = exercises.filter((e) => e.status !== "skipped");
   const progress = totals.target > 0 ? totals.logged / totals.target : 0;
+  const hasAnyLoggedSets = exercises.some((exercise) => exercise.logged.size > 0);
   const supersetPartnerIndex = current?.superset_group
     ? exercises.findIndex(
         (exercise, i) =>
@@ -260,6 +262,19 @@ function Logger({
     }
     const done = await finish();
     if (done) setIsComplete(true);
+  };
+
+  const discardWorkout = async () => {
+    setDiscarding(true);
+    try {
+      await deleteSession(sessionId);
+      router.replace("/");
+    } catch (err) {
+      console.error("Failed to discard workout", err);
+      toast({ message: "Couldn't discard this workout", icon: "x", tone: "danger" });
+    } finally {
+      setDiscarding(false);
+    }
   };
 
   const nextSetNumber = (() => {
@@ -636,34 +651,18 @@ function Logger({
         onClose={() => setExitOpen(false)}
         title="Leave this workout?"
         subtitle={
-          totals.logged > 0
-            ? "Everything you've logged is already saved. You can pick up where you left off."
-            : "Nothing logged yet — discarding won't lose any sets."
+          hasAnyLoggedSets
+            ? "Leave for now saves this session. Discard permanently deletes the session and every set you've logged."
+            : "This workout has no logged sets. Discard it or close this prompt to keep lifting."
         }
       >
         <div className="space-y-2.5 pb-4">
-          {totals.logged > 0 ? (
+          {hasAnyLoggedSets && (
             <Button block size="lg" variant="secondary" onClick={() => router.push("/")}>
               Leave for now
             </Button>
-          ) : (
-            <Button
-              block
-              size="lg"
-              variant="secondary"
-              onClick={async () => {
-                try {
-                  await deleteSession(sessionId);
-                } catch (err) {
-                  console.error(err);
-                }
-                router.replace("/");
-              }}
-            >
-              Discard workout
-            </Button>
           )}
-          {totals.logged > 0 && (
+          {hasAnyLoggedSets && (
             <Button
               block
               size="lg"
@@ -677,8 +676,15 @@ function Logger({
               Finish here
             </Button>
           )}
-          <Button block size="lg" variant="ghost" onClick={() => setExitOpen(false)}>
-            Keep lifting
+          <Button
+            block
+            size="lg"
+            variant="danger"
+            icon="trash"
+            loading={discarding}
+            onClick={() => void discardWorkout()}
+          >
+            Discard workout
           </Button>
         </div>
       </Sheet>
