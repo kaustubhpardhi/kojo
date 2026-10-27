@@ -50,6 +50,17 @@ export function SessionOverview({
             key={exercise.id}
             exercise={exercise}
             index={index}
+            supersetMate={
+              exercise.superset_group
+                ? exercises.find(
+                    (candidate) =>
+                      candidate.id !== exercise.id &&
+                      candidate.status !== "skipped" &&
+                      candidate.superset_group === exercise.superset_group &&
+                      candidate.superset_order !== exercise.superset_order,
+                  ) ?? null
+                : null
+            }
             isCurrent={index === currentIndex}
             onJump={() => {
               onJump(index);
@@ -68,6 +79,7 @@ export function SessionOverview({
 function OverviewRow({
   exercise,
   index,
+  supersetMate,
   isCurrent,
   onJump,
   onSkip,
@@ -76,6 +88,7 @@ function OverviewRow({
 }: {
   exercise: LiveExercise;
   index: number;
+  supersetMate: LiveExercise | null;
   isCurrent: boolean;
   onJump: () => void;
   onSkip: () => void;
@@ -121,6 +134,11 @@ function OverviewRow({
         <span className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-fg-muted">
           {complete && <Icon name="check" size={13} />}
           {logged}/{exercise.target_sets} sets
+          {supersetMate && (
+            <span className="rounded-full bg-accent-soft px-1.5 py-0.5 font-semibold text-accent-fg">
+              SS {exercise.superset_order === 0 ? "A" : "B"} · {supersetMate.exercise.name}
+            </span>
+          )}
           {skipped && " · skipped"}
         </span>
       </button>

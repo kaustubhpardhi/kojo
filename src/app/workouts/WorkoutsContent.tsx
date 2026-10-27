@@ -105,14 +105,14 @@ export function WorkoutsContent() {
         <EmptyState
           icon="dumbbell"
           title="Let's build your first workout"
-          body="Name it, add exercises, set your targets. Or start from your old A/B/C split."
+          body="Name it, add exercises, and set your targets."
           action={
             <div className="flex flex-col gap-2.5">
               <Button size="lg" icon="plus" onClick={() => router.push("/workouts/new")}>
                 Create a workout
               </Button>
               <Button size="lg" variant="secondary" icon="sparkle" onClick={() => setStarterOpen(true)}>
-                Import starter split
+                Browse workout templates
               </Button>
             </div>
           }
@@ -142,7 +142,7 @@ export function WorkoutsContent() {
           className="mt-4"
           onClick={() => setStarterOpen(true)}
         >
-          Browse starter templates
+          Browse workout templates
         </Button>
       )}
 

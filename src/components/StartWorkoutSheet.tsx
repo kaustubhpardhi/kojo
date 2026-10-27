@@ -92,7 +92,7 @@ export function StartWorkoutSheet({
           <EmptyState
             icon="dumbbell"
             title="No templates yet"
-            body="Build one in a minute, or import the starter split."
+            body="Build a workout, or browse ready-to-use templates."
             action={
               <Button
                 icon="plus"

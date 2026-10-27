@@ -92,24 +92,7 @@ function Logger({
   const [celebrating, setCelebrating] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [prSets, setPrSets] = useState<Set<string>>(new Set());
-  const [timeCapNudged, setTimeCapNudged] = useState(false);
   const keyboardInset = useKeyboardInset();
-
-  useEffect(() => {
-    if (!session?.started_at || timeCapNudged) return;
-    const started = new Date(session.started_at).getTime();
-    const tick = window.setInterval(() => {
-      const mins = (Date.now() - started) / 60_000;
-      if (mins >= 55) {
-        setTimeCapNudged(true);
-        toast({
-          message: "~55 min — cut the last superset to 2 rounds. Never skip the main lift.",
-          icon: "clock",
-        });
-      }
-    }, 30_000);
-    return () => window.clearInterval(tick);
-  }, [session?.started_at, timeCapNudged, toast]);
 
   useEffect(() => {
     if (session?.completed_at) router.replace(`/history/${sessionId}`);
@@ -147,6 +130,16 @@ function Logger({
 
   const activeExercises = exercises.filter((e) => e.status !== "skipped");
   const progress = totals.target > 0 ? totals.logged / totals.target : 0;
+  const supersetPartnerIndex = current?.superset_group
+    ? exercises.findIndex(
+        (exercise, i) =>
+          i !== index &&
+          exercise.status !== "skipped" &&
+          exercise.superset_group === current.superset_group &&
+          exercise.superset_order !== current.superset_order,
+      )
+    : -1;
+  const supersetPartner = supersetPartnerIndex >= 0 ? exercises[supersetPartnerIndex] : null;
 
   const handleLog = async (set: LoggedSet) => {
     if (!current) return;
@@ -165,15 +158,48 @@ function Logger({
     }
 
     const setsDone = current.logged.size + (current.logged.has(set.setNumber) ? 0 : 1);
-    // Supersets: rest starts after the B movement (superset_order === 1).
+    const pairPartnerIndex = current.superset_group
+      ? exercises.findIndex(
+          (exercise, i) =>
+            i !== index &&
+            exercise.status !== "skipped" &&
+            exercise.superset_group === current.superset_group &&
+            exercise.superset_order !== current.superset_order,
+        )
+      : -1;
+    const partner = pairPartnerIndex >= 0 ? exercises[pairPartnerIndex] : null;
+
+    if (!wasEditing && partner && set.setNumber <= partner.target_sets) {
+      if (current.superset_order === 0 && !partner.logged.has(set.setNumber)) {
+        // Finish A, then move straight to B for this round.
+        setIndex(pairPartnerIndex);
+        setRestFor(null);
+        return;
+      }
+      if (
+        current.superset_order === 1 &&
+        partner.logged.has(set.setNumber) &&
+        !partner.logged.has(set.setNumber + 1) &&
+        set.setNumber + 1 <= partner.target_sets
+      ) {
+        // Finish B, rest, then return to A for the next round.
+        setIndex(pairPartnerIndex);
+        setRestFor(current.rest_seconds);
+        return;
+      }
+      if (current.superset_order === 1 && partner.logged.has(set.setNumber)) {
+        // The pair's final round still gets its listed rest before moving on.
+        setRestFor(current.rest_seconds);
+        return;
+      }
+    }
+
     const isSupersetA =
-      current.superset_group != null && current.superset_order === 0;
-    if (
-      !wasEditing &&
-      setsDone < current.target_sets &&
-      current.rest_seconds > 0 &&
-      !isSupersetA
-    ) {
+      current.superset_group != null &&
+      current.superset_order === 0 &&
+      partner != null &&
+      set.setNumber <= partner.target_sets;
+    if (!wasEditing && setsDone < current.target_sets && current.rest_seconds > 0 && !isSupersetA) {
       setRestFor(current.rest_seconds);
     }
   };
@@ -356,13 +382,45 @@ function Logger({
                 <h1 className="mt-1 font-display text-[30px] font-extrabold leading-[1.1] tracking-[-0.02em]">
                   {current.exercise.name}
                 </h1>
+                {current.superset_group && supersetPartner && (
+                  <div className="mt-3 rounded-[var(--radius-md)] border border-accent/20 bg-accent-soft p-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-accent-fg">
+                        Superset · {current.superset_order === 0 ? "A" : "B"}
+                      </p>
+                      <span className="text-[12px] font-semibold text-fg-muted">
+                        {nextSetNumber > Math.min(current.target_sets, supersetPartner.target_sets)
+                          ? `Extra set ${nextSetNumber}`
+                          : `Round ${nextSetNumber} of ${Math.min(current.target_sets, supersetPartner.target_sets)}`}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-[13px] font-medium text-fg">
+                      {current.superset_order === 0 && nextSetNumber <= supersetPartner.target_sets
+                        ? `Then ${supersetPartner.exercise.name} · go straight to it`
+                        : current.superset_order === 1 && nextSetNumber < supersetPartner.target_sets
+                          ? `Then rest ${current.rest_seconds}s and return to ${supersetPartner.exercise.name}`
+                          : `Rest ${current.rest_seconds}s after this set`}
+                    </p>
+                    <div className="mt-2 flex gap-1.5" aria-label="Superset round progress">
+                      {Array.from(
+                        { length: Math.min(current.target_sets, supersetPartner.target_sets) },
+                        (_, round) => {
+                          const done =
+                            current.logged.has(round + 1) && supersetPartner.logged.has(round + 1);
+                          return (
+                            <span
+                              key={round}
+                              className={`h-1.5 flex-1 rounded-full ${done ? "bg-accent" : "bg-surface"}`}
+                            />
+                          );
+                        },
+                      )}
+                    </div>
+                  </div>
+                )}
                 {(current.target_weight != null ||
                   current.rep_range_low != null ||
-                  current.rir_label ||
-                  current.failure_last_set ||
-                  current.superset_group ||
-                  current.unilateral ||
-                  session.program_week_number === 4) && (
+                  current.unilateral) && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {current.target_weight != null &&
                       current.rep_range_low != null &&
@@ -383,34 +441,9 @@ function Logger({
                           .join(" · ")}
                       </span>
                     )}
-                    {current.rir_label && (
-                      <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-semibold text-fg-muted">
-                        RIR {current.rir_label}
-                      </span>
-                    )}
-                    {current.failure_last_set && (
-                      <span className="rounded-full bg-pop/20 px-2.5 py-1 text-[12px] font-bold uppercase tracking-wide text-pop">
-                        last set to failure
-                      </span>
-                    )}
-                    {current.superset_group && (
-                      <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-semibold text-fg-muted">
-                        SS {current.superset_group}
-                        {current.superset_order === 0
-                          ? "A"
-                          : current.superset_order === 1
-                            ? "B"
-                            : ""}
-                      </span>
-                    )}
                     {current.unilateral && (
                       <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[12px] font-medium text-fg-muted">
                         per leg
-                      </span>
-                    )}
-                    {session.program_week_number === 4 && (
-                      <span className="rounded-full bg-pop/20 px-2.5 py-1 text-[12px] font-bold uppercase tracking-wide text-pop">
-                        Deload week
                       </span>
                     )}
                   </div>

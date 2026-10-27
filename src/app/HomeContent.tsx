@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Calendar } from "@/components/Calendar";
-import { ProgramHomeCard } from "@/components/ProgramHomeCard";
 import { useStartWorkoutSheet } from "@/components/StartWorkoutContext";
 import { TemplateCard } from "@/components/TemplateCard";
 import { Button } from "@/components/ui/Button";
@@ -156,8 +155,6 @@ export function HomeContent() {
           </Button>
         </Card>
       ) : null}
-
-      <ProgramHomeCard userId={userId} />
 
       {/* Quick start */}
       <section className="mt-7">
